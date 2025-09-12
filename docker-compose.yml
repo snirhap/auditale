@@ -1,0 +1,97 @@
+version: '3.9'
+
+services:
+  nginx:
+    image: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - web
+
+  web:
+    build: .
+    volumes:
+      - .:/app
+    expose:
+      - "8000"
+    env_file:
+      - .env
+    depends_on:
+      primary-db:
+        condition: service_healthy
+      read-replica-1:
+        condition: service_healthy
+      read-replica-2:
+        condition: service_healthy
+
+  primary-db:
+    image: bitnami/postgresql:14
+    env_file:
+      - .env
+    volumes:
+      - primary_pgdata:/bitnami/postgresql
+    environment:
+      - POSTGRESQL_REPLICATION_MODE=master
+      - POSTGRESQL_LOGGING_COLLECTOR=true
+      - POSTGRESQL_LOG_MIN_DURATION_STATEMENT=0
+      - POSTGRESQL_LOG_CONNECTIONS=true
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRESQL_USERNAME"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  read-replica-1:
+    image: bitnami/postgresql:14
+    env_file:
+      - .env
+    environment:
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_MASTER_HOST=primary-db
+      - POSTGRESQL_DATABASE=${POSTGRESQL_DATABASE}
+      - POSTGRESQL_LOGGING_COLLECTOR=true
+      - POSTGRESQL_LOG_MIN_DURATION_STATEMENT=0
+      - POSTGRESQL_LOG_CONNECTIONS=true
+    volumes:
+      - replica_pgdata_1:/bitnami/postgresql
+    ports:
+      - "5433:5432"
+    depends_on:
+      - primary-db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRESQL_REPLICATION_USER"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  
+  read-replica-2:
+    image: bitnami/postgresql:14
+    env_file:
+      - .env
+    environment:
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_MASTER_HOST=primary-db
+      - POSTGRESQL_DATABASE=${POSTGRESQL_DATABASE}
+      - POSTGRESQL_LOGGING_COLLECTOR=true
+      - POSTGRESQL_LOG_MIN_DURATION_STATEMENT=0
+      - POSTGRESQL_LOG_CONNECTIONS=true
+    volumes:
+      - replica_pgdata_2:/bitnami/postgresql
+    ports:
+      - "5434:5432"
+    depends_on:
+      - primary-db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRESQL_REPLICATION_USER"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  primary_pgdata:
+  replica_pgdata_1:
+  replica_pgdata_2:

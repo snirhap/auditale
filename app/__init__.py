@@ -19,11 +19,10 @@ def create_app(config_obj):
     def home():
         return jsonify({"message": f"Welcome"})
 
-    from app.routes.auth import auth_bp
     from app.routes.customer import customer_bp
+    from app.routes.dashboard import dashboard_bp
 
-
-    app.register_blueprint(auth_bp)
     app.register_blueprint(customer_bp)
-    
+    app.register_blueprint(dashboard_bp)
+
     return app
