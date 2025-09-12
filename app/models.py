@@ -51,7 +51,7 @@ class Invoice(db.Model):
     due_date = Column(DateTime, nullable=False)
     paid_date = Column(DateTime, nullable=True)
     amount = Column(Float, nullable=False)
-    status = Column(String, default="unpaid")  # unpaid/paid/late
+    status = Column(String, default="unpaid")  # unpaid/paid
 
     customer = relationship("Customer", back_populates="invoices")
 
