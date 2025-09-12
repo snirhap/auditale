@@ -1,6 +1,5 @@
 from flask import Flask, jsonify
 from flask_migrate import Migrate
-from .config import Config
 from .models import db
 from .db_manager import DatabaseManager
 
@@ -10,7 +9,7 @@ def create_app(config_obj):
 
     db.init_app(app)
     
-    migrate = Migrate(app, db)
+    migrate = Migrate(app, db) # enables migrations
 
     # Set up custom database manager for read/write session and engine handling
     app.db_manager = DatabaseManager(config_obj)

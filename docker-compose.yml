@@ -18,6 +18,7 @@ services:
       - "8000"
     env_file:
       - .env
+    command: bash -c "flask db upgrade && gunicorn -b 0.0.0.0:8000 run:app"
     depends_on:
       primary-db:
         condition: service_healthy

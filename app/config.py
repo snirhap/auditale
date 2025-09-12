@@ -5,8 +5,6 @@ load_dotenv()
 
 class Config:
     FLASK_ENV = os.getenv("FLASK_ENV", "development")
-    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-    
     POSTGRES_USER = os.getenv("POSTGRESQL_USERNAME", "postgres")
     POSTGRES_PASSWORD = os.getenv("POSTGRESQL_PASSWORD", "postgres")
     POSTGRES_DB_NAME = os.getenv("POSTGRESQL_DATABASE", "auditale_db")
