@@ -60,6 +60,6 @@ class ApiUsage(db.Model):
     id = Column(Integer, primary_key=True)
     customer_id = Column(Integer, ForeignKey("customers.id"))
     timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    call_count = Column(Integer, default=0)
+    api_endpoint = Column(String, nullable=False)
 
     customer = relationship("Customer", back_populates="api_usage")

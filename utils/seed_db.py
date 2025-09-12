@@ -3,7 +3,7 @@ from random import random, choice, randint
 from faker import Faker
 from app import create_app
 from app.config import Config
-from app.models import Invoice, SupportTicket, db, Customer, LoginEvent, FeatureUsage
+from app.models import ApiUsage, Invoice, SupportTicket, db, Customer, LoginEvent, FeatureUsage
 
 fake = Faker()
 
@@ -13,8 +13,10 @@ MAX_LOGINS_PER_CUSTOMER = 15
 MAX_FEATURES_PER_CUSTOMER = 20
 MAX_CUSTOMER_TICKETS = 5
 MAX_CUSTOMER_INVOICES = 5
-FEATURE_NAMES = ["Dashboard", "Reports", "Exports", "Notifications", "API Access"]
+MAX_API_CALLS = 10
+FEATURE_NAMES = ["Dashboard", "Reports", "Messages", "Notifications", "Documentation"]
 SEGMENTS = ["Enterprise", "SMB", "Startup", "Bootstrap", "Private"]
+API_ENDPOINTS = ["login", "register", "get_report", "update_profile", "fetch_data", "graphs", "alerts"]
 
 def random_date_within_3_months():
     end = datetime.now(timezone.utc)
@@ -94,6 +96,14 @@ def seed():
                         paid_at=invoice_paid_at
                     )
                     session.add(invoice)
+                
+                for _ in range(randint(0, MAX_API_CALLS)):
+                    usage = ApiUsage(
+                        customer_id=customer.id,
+                        timestamp=random_date_within_3_months(),
+                        api_endpoint=choice(API_ENDPOINTS)
+                    )
+                    session.add(usage)
 
             print("Seeding complete.")
 

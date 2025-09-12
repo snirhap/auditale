@@ -62,7 +62,7 @@ def get_customer_health(customer_id):
             invoice_score = max(100 - (late_invoices * 50), 0)  # 2 late invoices or more == minimum points
 
             # API usage trends (last 30 days)
-            api_calls = session.query(func.sum(ApiUsage.call_count)) \
+            api_calls = session.query(func.count(ApiUsage.api_endpoint)) \
                                      .filter(ApiUsage.customer_id == customer_id,
                                              ApiUsage.timestamp >= last_30d).scalar() or 0
             api_score = min(api_calls // 50, 100)  # 500+ calls == maximum points
