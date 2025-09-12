@@ -80,13 +80,11 @@ def seed():
                     invoice_due_date = random_date_within_3_months()
                     invoice_amount = fake.pyfloat(min_value=1, max_value=1000, step=0.02)
 
-                    invoice_paid_at = None
-
                     if invoice_status == 'paid':
                         max_seconds = int((datetime.now(timezone.utc) - ticket_created_at).total_seconds())
                         invoice_paid_at = invoice_due_date + timedelta(seconds=randint(0, max_seconds))
                     else:
-                        tickets_closed_at = None
+                        invoice_paid_at = None
 
                     invoice = Invoice(
                         customer_id=customer.id,

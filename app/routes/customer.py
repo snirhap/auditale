@@ -24,70 +24,76 @@ def get_customer(customer_id):
                 return jsonify({'message': 'Customers not exist'}), 404
             return jsonify(customer.to_dict()), 200
 
+def calculate_customer_health(customer_id):
+    with current_app.db_manager.get_read_session() as session:
+        customer = session.query(Customer).filter_by(id=customer_id).first()
+        if not customer:
+            return jsonify({'message': 'Customers not exist'}), 404
+        
+        now = datetime.now(timezone.utc)
+        last_30d = now - timedelta(days=30)
+
+        # Login frequency (last 30 days)
+        login_count = session.query(func.count(LoginEvent.id)) \
+                                    .filter(LoginEvent.customer_id == customer_id,
+                                            LoginEvent.timestamp >= last_30d).scalar()
+        login_score = min(login_count * 10, 100)  # 10 logins or more == maximum points
+
+        # Feature adoption (unique features used / total features)
+        total_features = session.query(func.count(func.distinct(FeatureUsage.feature_name))).scalar()
+
+        features_used = session.query(func.count(func.distinct(FeatureUsage.feature_name))) \
+                                    .filter(FeatureUsage.customer_id == customer_id).scalar()
+        adoption_rate = features_used / total_features if adoption_rate else 0
+        adoption_score = min(int(adoption_rate * 100), 100)
+
+        # Support tickets (penalty for open tickets)
+        open_tickets = session.query(func.count(SupportTicket.id)) \
+                                    .filter(SupportTicket.customer_id == customer_id,
+                                            SupportTicket.status == "open").scalar()
+        ticket_score = max(100 - (open_tickets * 20), 0)  # 5 open tickets or more == minimum points
+
+        # Invoice payments (check paid and in time)
+        customer_invoices = session.query(Invoice).filter(Invoice.customer_id==customer_id).all()
+        if customer_invoices:
+            unpaid_or_late_invoices = [
+                    invoice for invoice in customer_invoices if (invoice.status == 'unpaid' or (invoice.paid_at and invoice.paid_at > invoice.due_date))
+                ]
+            invoice_score = ((len(customer_invoices) - len(unpaid_or_late_invoices)) / len(customer_invoices)) * 100  # unpaid or late invoices or more reduce points
+        else:
+            invoice_score = 100
+
+        # API usage trends (last 30 days)
+        api_calls = session.query(func.count(ApiUsage.api_endpoint)) \
+                                  .filter(ApiUsage.customer_id == customer_id,
+                                          ApiUsage.timestamp >= last_30d).scalar() or 0
+        api_score = min(api_calls // 50, 100)  # 500+ calls == maximum points
+
+        # Final weighted score
+        health_score = (
+            login_score * 0.25 +
+            adoption_score * 0.25 +
+            ticket_score * 0.20 +
+            invoice_score * 0.20 +
+            api_score * 0.10
+        )
+
+        return {
+            "customer_id": customer_id,
+            "scores": {
+                "logins": login_score,
+                "feature_adoption": adoption_score,
+                "support_tickets": ticket_score,
+                "invoices": invoice_score,
+                "api_usage": api_score,
+            },
+            "health_score": round(health_score, 2)
+        }
+
 @customer_bp.route('/customers/<int:customer_id>/health', methods=['GET'])
 def get_customer_health(customer_id):
     if request.method == 'GET':
-        with current_app.db_manager.get_read_session() as session:
-            customer = session.query(Customer).filter_by(id=customer_id).first()
-            if not customer:
-                return jsonify({'message': 'Customers not exist'}), 404
-            
-            now = datetime.now(timezone.utc)
-            last_30d = now - timedelta(days=30)
-
-            # Login frequency (last 30 days)
-            login_count = session.query(func.count(LoginEvent.id)) \
-                                        .filter(LoginEvent.customer_id == customer_id,
-                                                LoginEvent.timestamp >= last_30d).scalar()
-            login_score = min(login_count * 10, 100)  # 10 logins or more == maximum points
-
-            # Feature adoption (unique features used / total features)
-            total_features = session.query(func.count(func.distinct(FeatureUsage.feature_name))).scalar()
-
-            features_used = session.query(func.count(func.distinct(FeatureUsage.feature_name))) \
-                                          .filter(FeatureUsage.customer_id == customer_id).scalar()
-            adoption_rate = features_used / total_features
-            adoption_score = min(int(adoption_rate * 100), 100)
-
-            # Support tickets (penalty for open tickets)
-            open_tickets = session.query(func.count(SupportTicket.id)) \
-                                        .filter(SupportTicket.customer_id == customer_id,
-                                                SupportTicket.status == "open").scalar()
-            ticket_score = max(100 - (open_tickets * 20), 0)  # 5 open tickets or more == minimum points
-
-            # Invoice timeliness
-            late_invoices = session.query(func.count(Invoice.id)) \
-                                         .filter(Invoice.customer_id == customer_id, 
-                                                 Invoice.status == "late").scalar()
-            invoice_score = max(100 - (late_invoices * 50), 0)  # 2 late invoices or more == minimum points
-
-            # API usage trends (last 30 days)
-            api_calls = session.query(func.count(ApiUsage.api_endpoint)) \
-                                     .filter(ApiUsage.customer_id == customer_id,
-                                             ApiUsage.timestamp >= last_30d).scalar() or 0
-            api_score = min(api_calls // 50, 100)  # 500+ calls == maximum points
-
-            # Final weighted score
-            health_score = (
-                login_score * 0.25 +
-                adoption_score * 0.25 +
-                ticket_score * 0.20 +
-                invoice_score * 0.20 +
-                api_score * 0.10
-            )
-
-            return {
-                "customer_id": customer_id,
-                "scores": {
-                    "logins": login_score,
-                    "feature_adoption": adoption_score,
-                    "support_tickets": ticket_score,
-                    "invoices": invoice_score,
-                    "api_usage": api_score,
-                },
-                "health_score": round(health_score, 2)
-            }
-        
+        return jsonify({"health_score": calculate_customer_health(customer_id=customer_id)}), 200
 
 @customer_bp.route('/customers/<int:customer_id>/events', methods=['POST'])
 def record_event(customer_id):
@@ -133,7 +139,6 @@ def record_event(customer_id):
             session.commit()
 
             return jsonify({"message": f"{event_type} event recorded", "event_id": event.id}), 201
-
     
     elif request.method == 'GET':
         # return all events for a customer
