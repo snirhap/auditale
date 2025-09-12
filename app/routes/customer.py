@@ -2,7 +2,7 @@ from functools import wraps
 from flask import Blueprint, current_app, g, make_response, request, jsonify
 from sqlalchemy import func
 from ..models import ApiUsage, FeatureUsage, Invoice, LoginEvent, SupportTicket, Customer
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 customer_bp = Blueprint('customers', __name__)
 
@@ -32,16 +32,16 @@ def get_customer_health(customer_id):
             if not customer:
                 return jsonify({'message': 'Customers not exist'}), 404
             
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             last_30d = now - timedelta(days=30)
 
-            # 1. Login frequency (last 30 days)
+            # Login frequency (last 30 days)
             login_count = session.query(func.count(LoginEvent.id)) \
                                         .filter(LoginEvent.customer_id == customer_id,
                                                 LoginEvent.timestamp >= last_30d).scalar()
             login_score = min(login_count * 10, 100)  # 10 logins or more == maximum points
 
-            # 2. Feature adoption (unique features used / total features)
+            # Feature adoption (unique features used / total features)
             total_features = session.query(func.count(func.distinct(FeatureUsage.feature_name))).scalar()
 
             features_used = session.query(func.count(func.distinct(FeatureUsage.feature_name))) \
@@ -49,19 +49,19 @@ def get_customer_health(customer_id):
             adoption_rate = features_used / total_features
             adoption_score = min(int(adoption_rate * 100), 100)
 
-            # 3. Support tickets (penalty for open tickets)
+            # Support tickets (penalty for open tickets)
             open_tickets = session.query(func.count(SupportTicket.id)) \
                                         .filter(SupportTicket.customer_id == customer_id,
                                                 SupportTicket.status == "open").scalar()
             ticket_score = max(100 - (open_tickets * 20), 0)  # 5 open tickets or more == minimum points
 
-            # 4. Invoice timeliness
+            # Invoice timeliness
             late_invoices = session.query(func.count(Invoice.id)) \
                                          .filter(Invoice.customer_id == customer_id, 
                                                  Invoice.status == "late").scalar()
             invoice_score = max(100 - (late_invoices * 50), 0)  # 2 late invoices or more == minimum points
 
-            # 5. API usage trends (last 30 days)
+            # API usage trends (last 30 days)
             api_calls = session.query(func.sum(ApiUsage.call_count)) \
                                      .filter(ApiUsage.customer_id == customer_id,
                                              ApiUsage.timestamp >= last_30d).scalar() or 0
@@ -107,15 +107,15 @@ def record_event(customer_id):
             # Route event to the right model
             if event_type == "login":
                 event = LoginEvent(customer_id=customer.id, 
-                                   timestamp=data.get("timestamp", datetime.utcnow()))
+                                   timestamp=data.get("timestamp", datetime.now(timezone.utc)))
             elif event_type == "feature":
                 event = FeatureUsage(customer_id=customer.id,
                                      feature_name=data["feature_name"],
-                                     timestamp=data.get("timestamp", datetime.utcnow()))
+                                     timestamp=data.get("timestamp", datetime.now(timezone.utc)))
             elif event_type == "ticket":
                 event = SupportTicket(customer_id=customer.id,
                                       status=data.get("status", "open"),
-                                      created_at=data.get("created_at", datetime.utcnow()))
+                                      created_at=data.get("created_at", datetime.now(timezone.utc)))
             elif event_type == "invoice":
                 event = Invoice(customer_id=customer.id,
                                 due_date=data["due_date"],
@@ -125,7 +125,7 @@ def record_event(customer_id):
             elif event_type == "api":
                 event = ApiUsage(customer_id=customer.id,
                                  call_count=data.get("call_count", 0),
-                                 timestamp=data.get("timestamp", datetime.utcnow()))
+                                 timestamp=data.get("timestamp", datetime.now(timezone.utc)))
             else:
                 return jsonify({"error": f"Unknown event_type {event_type}"}), 400
             

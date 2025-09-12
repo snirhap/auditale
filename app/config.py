@@ -23,6 +23,7 @@ class Config:
         READING_REPLICAS = 2
 
 class TestConfig(Config):
+    FLASK_ENV = "testing"
     TEST_DB = os.path.abspath('test_temp.db')
     SQLALCHEMY_DATABASE_URI = f"sqlite:///{TEST_DB}"
     TESTING = True

@@ -9,7 +9,7 @@ def create_app(config_obj):
 
     db.init_app(app)
     
-    migrate = Migrate(app, db) # enables migrations
+    Migrate(app, db) # enables db migrations/metadata updates
 
     # Set up custom database manager for read/write session and engine handling
     app.db_manager = DatabaseManager(config_obj)
