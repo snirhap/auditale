@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import Blueprint, current_app, g, make_response, request, jsonify
+from flask import Blueprint, current_app, g, make_response, request, jsonify, render_template
 from sqlalchemy import func
 from ..models import ApiUsage, FeatureUsage, Invoice, LoginEvent, SupportTicket, Customer
 from datetime import datetime, timedelta, timezone
@@ -26,7 +26,7 @@ def get_customer(customer_id):
     with current_app.db_manager.get_read_session() as session:
         customer = session.query(Customer).filter_by(id=customer_id).first()
         if not customer:
-            return jsonify({'message': 'Customer does not exist'}), 404
+            return render_template("customer.html", customer=None, health=None), 404
 
         customer_dict = customer.to_dict()
         
@@ -34,7 +34,7 @@ def get_customer(customer_id):
         health = calculate_customer_health(session, customer_id)
         customer_dict['health'] = health if health else None
 
-        return jsonify(customer_dict), 200
+        return render_template("customer.html", customer=customer_dict, health=health)
 
 def calculate_customer_health(session, customer_id):
     customer = session.query(Customer).filter_by(id=customer_id).first()
@@ -70,7 +70,7 @@ def calculate_customer_health(session, customer_id):
         unpaid_or_late_invoices = [
                 invoice for invoice in customer_invoices if (invoice.status == 'unpaid' or (invoice.due_date and invoice.due_date > invoice.due_date))
             ]
-        invoice_score = ((len(customer_invoices) - len(unpaid_or_late_invoices)) / len(customer_invoices)) * 100  # unpaid or late invoices or more reduce points
+        invoice_score = int(((len(customer_invoices) - len(unpaid_or_late_invoices)) / len(customer_invoices)) * 100)  # unpaid or late invoices or more reduce points
     else:
         invoice_score = 100
 
@@ -78,7 +78,7 @@ def calculate_customer_health(session, customer_id):
     api_calls = session.query(func.count(ApiUsage.api_endpoint)) \
                                 .filter(ApiUsage.customer_id == customer_id,
                                         ApiUsage.timestamp >= last_30d).scalar() or 0
-    api_score = min(api_calls // 2, 100)  # 200+ calls == maximum points
+    api_score = min(api_calls * 10, 100)  # 10+ calls == maximum points
 
     # Final weighted score
     health_score = (

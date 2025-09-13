@@ -9,7 +9,6 @@ from app.models import ApiUsage, Invoice, SupportTicket, db, Customer, LoginEven
 fake = Faker()
 
 TRUNCATE_FIRST = True
-
 NEW_CUSTOMERS = 10
 DAYS_HISTORY = 90
 MAX_LOGINS_PER_CUSTOMER = 15
@@ -26,19 +25,15 @@ def random_date_within_3_months():
     start = end - timedelta(days=DAYS_HISTORY)
     return start + (end - start) * random()
 
-def seed():
-    app = create_app(Config)
-
+def seed(app=None):
     with app.app_context():
-
-        if TRUNCATE_FIRST:
-            with db.engine.begin() as conn:  # use a transaction
-                truncate_stmt = "TRUNCATE TABLE {} RESTART IDENTITY CASCADE;".format(
-                    ", ".join([t.name for t in db.metadata.sorted_tables])
-                )
-                conn.execute(text(truncate_stmt))
-    
         with app.db_manager.get_write_session() as session:
+
+            if TRUNCATE_FIRST:
+                for table in [ApiUsage, FeatureUsage, Invoice, LoginEvent, SupportTicket, Customer]:
+                    session.query(table).delete()
+                session.commit()
+
             customers = []
             for _ in range(NEW_CUSTOMERS):
                 customer = Customer(name=fake.company(), segment=choice(SEGMENTS))

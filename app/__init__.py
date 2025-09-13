@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, redirect, url_for
 from flask_migrate import Migrate
 from .models import db
 from .db_manager import DatabaseManager
@@ -15,8 +15,8 @@ def create_app(config_obj):
     app.db_manager = DatabaseManager(config_obj)
 
     @app.route('/')
-    def home():
-        return jsonify({"message": f"Welcome"})
+    def root():
+        return redirect(url_for('dashboard.dashboard'))
 
     from app.routes.customer import customer_bp
     from app.routes.dashboard import dashboard_bp

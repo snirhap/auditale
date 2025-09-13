@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import Blueprint, current_app, g, make_response, request, jsonify, render_template
+from flask import Blueprint, current_app, request, jsonify, render_template
 from sqlalchemy import func
 from app.routes.customer import calculate_customer_health
 from ..models import ApiUsage, FeatureUsage, Invoice, LoginEvent, SupportTicket, Customer
