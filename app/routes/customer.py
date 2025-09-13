@@ -101,6 +101,7 @@ def calculate_customer_health(session, customer_id):
 
     # Final weighted score
     # FIXME: Weights can be adjusted by configuration
+    # FIXME: Make thresholds as a new table in DB (new model CustomerHealthThresholds)
     health_score = (
         login_score * 0.25 +
         adoption_score * 0.25 +
