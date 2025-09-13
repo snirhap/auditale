@@ -1,11 +1,14 @@
 from datetime import datetime, timedelta, timezone
 from random import random, choice, randint
 from faker import Faker
+from sqlalchemy import text
 from app import create_app
 from app.config import Config
 from app.models import ApiUsage, Invoice, SupportTicket, db, Customer, LoginEvent, FeatureUsage
 
 fake = Faker()
+
+TRUNCATE_FIRST = True
 
 NEW_CUSTOMERS = 10
 DAYS_HISTORY = 90
@@ -13,7 +16,7 @@ MAX_LOGINS_PER_CUSTOMER = 15
 MAX_FEATURES_PER_CUSTOMER = 20
 MAX_CUSTOMER_TICKETS = 5
 MAX_CUSTOMER_INVOICES = 5
-MAX_API_CALLS = 10
+MAX_API_CALLS = 50
 FEATURE_NAMES = ["Dashboard", "Reports", "Messages", "Notifications", "Documentation"]
 SEGMENTS = ["Enterprise", "SMB", "Startup", "Bootstrap", "Private"]
 API_ENDPOINTS = ["login", "register", "get_report", "update_profile", "fetch_data", "graphs", "alerts"]
@@ -27,6 +30,14 @@ def seed():
     app = create_app(Config)
 
     with app.app_context():
+
+        if TRUNCATE_FIRST:
+            with db.engine.begin() as conn:  # use a transaction
+                truncate_stmt = "TRUNCATE TABLE {} RESTART IDENTITY CASCADE;".format(
+                    ", ".join([t.name for t in db.metadata.sorted_tables])
+                )
+                conn.execute(text(truncate_stmt))
+    
         with app.db_manager.get_write_session() as session:
             customers = []
             for _ in range(NEW_CUSTOMERS):
@@ -62,7 +73,7 @@ def seed():
 
                     if ticket_status == 'closed':
                         max_seconds = int((datetime.now(timezone.utc) - ticket_created_at).total_seconds())
-                        tickets_closed_at = ticket_created_at + randint(1, max_seconds)
+                        tickets_closed_at = ticket_created_at + timedelta(seconds=randint(1, max_seconds))
                     else:
                         tickets_closed_at = None
 
@@ -76,22 +87,22 @@ def seed():
                 
                 # Invoices
                 for _ in range(randint(0, MAX_CUSTOMER_INVOICES)):
-                    invoice_status = choice(['unpaid', 'paid'])
+                    invoice_status = choice(['unpaid', 'paid', 'late'])
                     invoice_due_date = random_date_within_3_months()
-                    invoice_amount = fake.pyfloat(min_value=1, max_value=1000, step=0.02)
+                    invoice_amount = fake.pyfloat(min_value=1, max_value=1000)
 
-                    if invoice_status == 'paid':
-                        max_seconds = int((datetime.now(timezone.utc) - ticket_created_at).total_seconds())
-                        invoice_paid_at = invoice_due_date + timedelta(seconds=randint(0, max_seconds))
+                    if invoice_status in ['paid', 'late']:
+                        max_seconds = int((datetime.now(timezone.utc) - invoice_due_date).total_seconds())
+                        invoice_paid_date = invoice_due_date + timedelta(seconds=randint(0, max_seconds)) if invoice_status == 'late' else invoice_due_date - timedelta(seconds=randint(0, max_seconds))
                     else:
-                        invoice_paid_at = None
+                        invoice_paid_date = None
 
                     invoice = Invoice(
                         customer_id=customer.id,
                         status=invoice_status,
                         due_date=invoice_due_date,
                         amount=invoice_amount,
-                        paid_at=invoice_paid_at
+                        paid_date=invoice_paid_date
                     )
                     session.add(invoice)
                 

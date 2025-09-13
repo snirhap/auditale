@@ -16,7 +16,7 @@ def get_all_customers():
         response = []
 
         for customer in customers:
-            customer_health_score = calculate_customer_health(session, customer.id) 
+            customer_health_score = calculate_customer_health(session, customer.id).get("health_score", 0)
             response.append({**customer.to_dict(), "health": customer_health_score})
 
         return jsonify(response), 200
@@ -68,7 +68,7 @@ def calculate_customer_health(session, customer_id):
     customer_invoices = session.query(Invoice).filter(Invoice.customer_id==customer_id).all()
     if customer_invoices:
         unpaid_or_late_invoices = [
-                invoice for invoice in customer_invoices if (invoice.status == 'unpaid' or (invoice.paid_at and invoice.paid_at > invoice.due_date))
+                invoice for invoice in customer_invoices if (invoice.status == 'unpaid' or (invoice.due_date and invoice.due_date > invoice.due_date))
             ]
         invoice_score = ((len(customer_invoices) - len(unpaid_or_late_invoices)) / len(customer_invoices)) * 100  # unpaid or late invoices or more reduce points
     else:

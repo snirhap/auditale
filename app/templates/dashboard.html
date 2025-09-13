@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Customer Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="container mt-5">
+    <h1>Customer Dashboard</h1>
+    <p><strong>Total Customers:</strong> {{ total_customers }}</p>
+    <p><strong>Average Health Score:</strong> {{ avg_health }}</p>
+
+    <h2>Customers</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Health Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in customers %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('customers.get_customer', customer_id=c.id) }}">
+                            {{ c.name }}
+                        </a>
+                    </td>
+                    <td>{{ c.health_score }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

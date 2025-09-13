@@ -17,6 +17,13 @@ class Customer(db.Model):
     invoices = relationship("Invoice", back_populates="customer")
     api_usage = relationship("ApiUsage", back_populates="customer")
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "segment": self.segment
+        }
+
 class LoginEvent(db.Model):
     __tablename__ = "logins"
     id = Column(Integer, primary_key=True)
