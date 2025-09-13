@@ -83,17 +83,19 @@ def seed(app=None):
                 # Invoices
                 for _ in range(randint(0, MAX_CUSTOMER_INVOICES)):
                     invoice_status = choice(['unpaid', 'paid', 'late'])
-                    invoice_due_date = random_date_within_3_months()
-                    invoice_amount = fake.pyfloat(min_value=1, max_value=1000)
+                    invoice_issued_at = random_date_within_3_months()
+                    invoice_due_date = invoice_issued_at + timedelta(seconds=randint(0, 360000))  # due date within 10 days
+                    invoice_amount = round(fake.pyfloat(min_value=1, max_value=1000), 2)
 
                     if invoice_status in ['paid', 'late']:
                         max_seconds = int((datetime.now(timezone.utc) - invoice_due_date).total_seconds())
-                        invoice_paid_date = invoice_due_date + timedelta(seconds=randint(0, max_seconds)) if invoice_status == 'late' else invoice_due_date - timedelta(seconds=randint(0, max_seconds))
+                        invoice_paid_date = invoice_due_date + timedelta(seconds=randint(0, max_seconds)) if invoice_status == 'late' else invoice_due_date
                     else:
                         invoice_paid_date = None
 
                     invoice = Invoice(
                         customer_id=customer.id,
+                        issued_at=invoice_issued_at,
                         status=invoice_status,
                         due_date=invoice_due_date,
                         amount=invoice_amount,

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ customer.name }} - Customer Details</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="container mt-5">
+    {% if customer %}
+        <h1>Customer: {{ customer.id }}</h1>
+
+        <h3>Details</h3>
+        <ul>
+            <li><strong>Name:</strong> {{ customer.name }}</li>
+            <li><strong>Segment:</strong> {{ customer.segment }}</li>
+        </ul>
+        {% if health %}
+            <h3>Health Breakdown</h3>
+            <p><strong>Overall Health Score:</strong> {{ health.health_score }}</p>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Factor</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Logins (last 30 days)</td>
+                        <td>{{ health.scores.logins }}</td>
+                    </tr>
+                    <tr>
+                        <td>Feature Adoption</td>
+                        <td>{{ health.scores.feature_adoption }}</td>
+                    </tr>
+                    <tr>
+                        <td>Support Tickets</td>
+                        <td>{{ health.scores.support_tickets }}</td>
+                    </tr>
+                    <tr>
+                        <td>Invoices</td>
+                        <td>{{ health.scores.invoices }}</td>
+                    </tr>
+                    <tr>
+                        <td>API Usage</td>
+                        <td>{{ health.scores.api_usage }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        {% else %}
+            <p>No health data available for this customer.</p>
+        {% endif %}
+    {% else %}
+        <p>Customer not found.</p>
+    {% endif %}
+
+    <a href="{{ url_for('customers.get_customer', customer_id=customer.id) }}" class="btn btn-primary">Back to Customer Details</a>
+    <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+</body>
+</html>

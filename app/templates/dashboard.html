@@ -1,31 +1,116 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Customer Dashboard</title>
+    <title>Dashboard</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
 <body class="container mt-5">
-    <h1>Customer Dashboard</h1>
-    <p><strong>Total Customers:</strong> {{ total_customers }}</p>
-    <p><strong>Average Health Score:</strong> {{ avg_health }}</p>
+    <h1>Dashboard</h1>
 
-    <h2>Customers</h2>
+    <a href="{{ url_for('customers.get_all_customers') }}" class="btn btn-primary mb-4">View All Customers</a>
+
+    <h2>Latest Actions</h2>
+    <p></p>
+    <h3>Latest Logins</h3>
     <table class="table table-striped">
         <thead>
             <tr>
+                <th>Customer ID</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for login in latest_actions.logins %}
+                <tr>
+                    <td>{{ login.customer_id }}</td>
+                    <td>{{ login.timestamp }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3>Latest Feature Usages</h3>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Customer ID</th>
+                <th>Feature Name</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for feature in latest_actions.feature_usages %}
+                <tr>
+                    <td>{{ feature.customer_id }}</td>
+                    <td>{{ feature.feature_name }}</td>
+                    <td>{{ feature.timestamp }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3>Latest Invoices</h3>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Invoice ID</th>
+                <th>Customer ID</th>
+                <th>Issued At</th>
+                <th>Due Date</th>
+                <th>Paid Date</th>
+                <th>Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for invoice in latest_actions.invoices %}
+                <tr>
+                    <td>{{ invoice.id }}</td>
+                    <td>{{ invoice.customer_id }}</td>
+                    <td>{{ invoice.issued_at }}</td>
+                    <td>{{ invoice.due_date }}</td>
+                    <td>{{ invoice.paid_date }}</td>
+                    <td>{{ invoice.amount }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3>Latest API Calls</h3>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Customer ID</th>
+                <th>Endpoint</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for api in latest_actions.api_calls %}
+                <tr>
+                    <td>{{ api.customer_id }}</td>
+                    <td>{{ api.api_endpoint }}</td>
+                    <td>{{ api.timestamp }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>At-Risk Customers (Health Score &lt; 50)</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Customer ID</th>
                 <th>Name</th>
                 <th>Health Score</th>
             </tr>
         </thead>
         <tbody>
-            {% for c in customers %}
+            {% for customer in risky_customers %}
                 <tr>
-                    <td>
-                        <a href="{{ url_for('customers.get_customer', customer_id=c.id) }}">
-                            {{ c.name }}
-                        </a>
-                    </td>
-                    <td>{{ c.health_score }}</td>
+                    <td>{{ customer.id }}</td>
+                    <td>{{ customer.name }}</td>
+                    <td>{{ customer.health_score }}</td>
                 </tr>
             {% endfor %}
         </tbody>

@@ -9,7 +9,7 @@ class Customer(db.Model):
     __tablename__ = "customers"
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    segment = Column(String)  # e.g. Enterprise, SMB, Startup
+    segment = Column(String)
 
     logins = relationship("LoginEvent", back_populates="customer")
     features = relationship("FeatureUsage", back_populates="customer")
@@ -32,6 +32,13 @@ class LoginEvent(db.Model):
     
     customer = relationship("Customer", back_populates="logins")
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "customer_id": self.customer_id,
+            "timestamp": self.timestamp.isoformat()
+        }
+
 class FeatureUsage(db.Model):
     __tablename__ = "feature_usage"
     id = Column(Integer, primary_key=True)
@@ -40,6 +47,14 @@ class FeatureUsage(db.Model):
     timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     customer = relationship("Customer", back_populates="features")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "customer_id": self.customer_id,
+            "feature_name": self.feature_name,
+            "timestamp": self.timestamp.isoformat()
+        }
 
 class SupportTicket(db.Model):
     __tablename__ = "support_tickets"
@@ -51,16 +66,37 @@ class SupportTicket(db.Model):
 
     customer = relationship("Customer", back_populates="tickets")
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "customer_id": self.customer_id,
+            "status": self.status,
+            "created_at": self.created_at.isoformat(),
+            "closed_at": self.closed_at.isoformat() if self.closed_at else None
+        }
+
 class Invoice(db.Model):
     __tablename__ = "invoices"
     id = Column(Integer, primary_key=True)
     customer_id = Column(Integer, ForeignKey("customers.id"))
+    issued_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     due_date = Column(DateTime, nullable=False)
     paid_date = Column(DateTime, nullable=True)
     amount = Column(Float, nullable=False)
     status = Column(String, default="unpaid")  # unpaid/paid
 
     customer = relationship("Customer", back_populates="invoices")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "customer_id": self.customer_id,
+            "issued_at": self.issued_at.isoformat(),
+            "due_date": self.due_date.isoformat(),
+            "paid_date": self.paid_date.isoformat() if self.paid_date else None,
+            "amount": self.amount,
+            "status": self.status
+        }
 
 class ApiUsage(db.Model):
     __tablename__ = "api_usage"
@@ -70,3 +106,11 @@ class ApiUsage(db.Model):
     api_endpoint = Column(String, nullable=False)
 
     customer = relationship("Customer", back_populates="api_usage")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "customer_id": self.customer_id,
+            "timestamp": self.timestamp.isoformat(),
+            "api_endpoint": self.api_endpoint
+        }

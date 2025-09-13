@@ -11,44 +11,11 @@
         <h3>Details</h3>
         <ul>
             <li><strong>Name:</strong> {{ customer.name }}</li>
-            <li><strong>Segment</strong> {{ customer.segment }}</li>
+            <li><strong>Segment:</strong> {{ customer.segment }}</li>
+            {% if health %}
+                <li><strong>Health Score:</strong> {{ health.health_score }}</li>
+            {% endif %}
         </ul>
-        {% if health %}
-            <h3>Health Breakdown</h3>
-            <p><strong>Overall Health Score:</strong> {{ health.health_score }}</p>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Factor</th>
-                        <th>Score</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Logins (last 30 days)</td>
-                        <td>{{ health.scores.logins }}</td>
-                    </tr>
-                    <tr>
-                        <td>Feature Adoption</td>
-                        <td>{{ health.scores.feature_adoption }}</td>
-                    </tr>
-                    <tr>
-                        <td>Support Tickets</td>
-                        <td>{{ health.scores.support_tickets }}</td>
-                    </tr>
-                    <tr>
-                        <td>Invoices</td>
-                        <td>{{ health.scores.invoices }}</td>
-                    </tr>
-                    <tr>
-                        <td>API Usage</td>
-                        <td>{{ health.scores.api_usage }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        {% else %}
-            <p>No health data available for this customer.</p>
-        {% endif %}
     {% else %}
         <p>Customer not found.</p>
     {% endif %}

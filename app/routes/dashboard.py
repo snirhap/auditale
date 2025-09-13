@@ -1,28 +1,50 @@
 from functools import wraps
-from flask import Blueprint, current_app, request, jsonify, render_template
-from sqlalchemy import func
+from flask import Blueprint, current_app, jsonify, render_template
 from app.routes.customer import calculate_customer_health
 from ..models import ApiUsage, FeatureUsage, Invoice, LoginEvent, SupportTicket, Customer
-from datetime import datetime
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
 @dashboard_bp.route("/dashboard")
 def dashboard():
     with current_app.db_manager.get_read_session() as session:
-        customers = session.query(Customer).all()
-
-        customers_with_health = []
-        for c in customers:
-            score = calculate_customer_health(session, c.id).get("health_score", 0)
-            customers_with_health.append({
-                **c.to_dict(),
-                "health_score": score
-            })
+        latest = latest_actions()
+        risky = risky_customers()
 
         return render_template(
             "dashboard.html",
-            total_customers=len(customers),
-            avg_health=round(sum(c['health_score'] for c in customers_with_health) / len(customers_with_health), 2) if customers_with_health else 0,
-            customers=customers_with_health
+            latest_actions=latest,
+            risky_customers=risky
         )
+
+def latest_actions():
+    with current_app.db_manager.get_read_session() as session:
+        latest_logins = session.query(LoginEvent).order_by(LoginEvent.timestamp.desc()).limit(5).all()
+        latest_tickets = session.query(SupportTicket).order_by(SupportTicket.created_at.desc()).limit(5).all()
+        latest_invoices = session.query(Invoice).order_by(Invoice.issued_at.desc()).limit(5).all()
+        latest_apis = session.query(ApiUsage).order_by(ApiUsage.timestamp.desc()).limit(5).all()
+        latest_features = session.query(FeatureUsage).order_by(FeatureUsage.timestamp.desc()).limit(5).all()
+
+        return {
+            "logins": [l.to_dict() for l in latest_logins],
+            "tickets": [t.to_dict() for t in latest_tickets],
+            "invoices": [i.to_dict() for i in latest_invoices],
+            "api_calls": [a.to_dict() for a in latest_apis],
+            "feature_usages": [f.to_dict() for f in latest_features]
+        }
+
+def risky_customers():
+    with current_app.db_manager.get_read_session() as session:
+        customers = session.query(Customer).all()
+
+        risky_threshold = 40  # Define threshold for risky customers
+        risky_customers_list = []
+        for c in customers:
+            health = calculate_customer_health(session, c.id)
+            if health and health.get("health_score", 0) < risky_threshold:
+                risky_customers_list.append({
+                    **c.to_dict(),
+                    "health_score": health.get("health_score", 0)
+                })
+
+        return risky_customers_list

@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import Blueprint, current_app, g, make_response, request, jsonify, render_template
+from flask import Blueprint, current_app, make_response, request, jsonify, render_template
 from sqlalchemy import func
 from ..models import ApiUsage, FeatureUsage, Invoice, LoginEvent, SupportTicket, Customer
 from datetime import datetime, timedelta, timezone
@@ -8,18 +8,37 @@ customer_bp = Blueprint('customers', __name__)
 
 @customer_bp.route('/customers', methods=['GET'])
 def get_all_customers():
+    
     with current_app.db_manager.get_read_session() as session:
-        customers = session.query(Customer).all() 
-        if not customers:
-            return jsonify({'message': 'No customers in DB'}), 404
+        customers = session.query(Customer).all()
 
-        response = []
+        customers_with_health = []
+        for c in customers:
+            score = calculate_customer_health(session, c.id).get("health_score", 0)
+            customers_with_health.append({
+                **c.to_dict(),
+                "health_score": score
+            })
 
-        for customer in customers:
-            customer_health_score = calculate_customer_health(session, customer.id).get("health_score", 0)
-            response.append({**customer.to_dict(), "health": customer_health_score})
+        return render_template(
+            "customers_list.html",
+            total_customers=len(customers),
+            avg_health=round(sum(c['health_score'] for c in customers_with_health) / len(customers_with_health), 2) if customers_with_health else 0,
+            customers=customers_with_health
+        )
 
-        return jsonify(response), 200
+
+        # customers = session.query(Customer).all() 
+        # if not customers:
+        #     return jsonify({'message': 'No customers in DB'}), 404
+
+        # response = []
+
+        # for customer in customers:
+        #     customer_health_score = calculate_customer_health(session, customer.id).get("health_score", 0)
+        #     response.append({**customer.to_dict(), "health": customer_health_score})
+
+        # return render_template("customers_list.html", customers=response, total_customers=len(customers),
         
 @customer_bp.route('/customers/<int:customer_id>', methods=['GET'])
 def get_customer(customer_id):
@@ -81,6 +100,7 @@ def calculate_customer_health(session, customer_id):
     api_score = min(api_calls * 10, 100)  # 10+ calls == maximum points
 
     # Final weighted score
+    # FIXME: Weights can be adjusted by configuration
     health_score = (
         login_score * 0.25 +
         adoption_score * 0.25 +
@@ -104,10 +124,22 @@ def calculate_customer_health(session, customer_id):
 @customer_bp.route('/customers/<int:customer_id>/health', methods=['GET'])
 def get_customer_health(customer_id):
     if request.method == 'GET':
-        return jsonify({"health_score": calculate_customer_health(customer_id=customer_id)}), 200
+        with current_app.db_manager.get_read_session() as session:
+            customer = session.query(Customer).filter_by(id=customer_id).first()
+        
+        if not customer:
+            return render_template("customer.html", customer=None, health=None), 404
+
+        customer_dict = customer.to_dict()
+        
+        # Calculate health
+        health = calculate_customer_health(session, customer_id)
+        customer_dict['health'] = health if health else None
+
+        return render_template("customer_health.html", customer=customer_dict, health=health), 200
 
 @customer_bp.route('/customers/<int:customer_id>/events', methods=['POST'])
-def record_event(customer_id):
+def customer_events(customer_id):
     if request.method == 'POST':
         with current_app.db_manager.get_write_session() as session:
             customer = session.query(Customer).filter_by(id=customer_id).first()
