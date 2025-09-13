@@ -13,6 +13,11 @@ if env == "testing":
         db.create_all()
         # seed data
         seed(app)
+elif env == "development":
+    app = create_app(Config)
+    with app.app_context():
+        # seed data
+        seed(app)
 else:
     app = create_app(Config)
 
