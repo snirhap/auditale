@@ -125,6 +125,14 @@ def get_customer_health(customer_id):
 
         return render_template("customer_health.html", customer=customer_dict, health=health), 200
 
+def parse_iso_datetime(date_str):
+    if not date_str:
+        return None
+    try:
+        return datetime.fromisoformat(date_str)
+    except ValueError:
+        raise ValueError(f"{date_str} is not a valid ISO 8601 datetime string")
+
 @customer_bp.route('/customers/<int:customer_id>/events', methods=['POST'])
 def customer_events(customer_id):
     if request.method == 'POST':
@@ -140,38 +148,39 @@ def customer_events(customer_id):
             if not event_type:
                 return jsonify({"error": "event_type is required"}), 400
             
-            # Route event to the right model
-            if data.get("timestamp"):
-                try:
-                    data["timestamp"] = datetime.fromisoformat(data["timestamp"])
-                except ValueError:
-                    return jsonify({"error": "Invalid timestamp format"}), 400
+            try:
+                if event_type == "login":
+                    event = LoginEvent(customer_id=customer.id, 
+                                    timestamp=parse_iso_datetime(data.get("timestamp")))
+                elif event_type == "feature":
+                    event = FeatureUsage(customer_id=customer.id,
+                                        feature_name=data["feature_name"],
+                                        timestamp=parse_iso_datetime(data.get("timestamp")))
+                elif event_type == "ticket":
+                    event = SupportTicket(customer_id=customer.id,
+                                        status=data.get("status", "open"),
+                                        created_at=parse_iso_datetime(data.get("created_at")))
+                elif event_type == "invoice":
+                    event = Invoice(customer_id=customer.id,
+                                    issued_at=parse_iso_datetime(data.get("issued_at")),
+                                    due_date=parse_iso_datetime(data.get("due_date")),
+                                    amount=data["amount"],
+                                    status=data.get("status", "unpaid"),
+                                    paid_date=parse_iso_datetime(data.get("paid_date")))
+                elif event_type == "api":
+                    event = ApiUsage(customer_id=customer.id,
+                                    call_count=data.get("call_count", 0),
+                                    timestamp=parse_iso_datetime(data.get("timestamp")))
+                else:
+                    return jsonify({"error": f"Unknown event_type {event_type}"}), 400
+                
+                session.add(event)
+                session.commit()
 
-            if event_type == "login":
-                event = LoginEvent(customer_id=customer.id, 
-                                   timestamp=data.get("timestamp", datetime.now(timezone.utc)))
-            elif event_type == "feature":
-                event = FeatureUsage(customer_id=customer.id,
-                                     feature_name=data["feature_name"],
-                                     timestamp=data.get("timestamp", datetime.now(timezone.utc)))
-            elif event_type == "ticket":
-                event = SupportTicket(customer_id=customer.id,
-                                      status=data.get("status", "open"),
-                                      created_at=data.get("created_at", datetime.now(timezone.utc)))
-            elif event_type == "invoice":
-                event = Invoice(customer_id=customer.id,
-                                due_date=data["due_date"],
-                                amount=data["amount"],
-                                status=data.get("status", "unpaid"),
-                                paid_date=data.get("paid_date"))
-            elif event_type == "api":
-                event = ApiUsage(customer_id=customer.id,
-                                 call_count=data.get("call_count", 0),
-                                 timestamp=data.get("timestamp", datetime.now(timezone.utc)))
-            else:
-                return jsonify({"error": f"Unknown event_type {event_type}"}), 400
-            
-            session.add(event)
-            session.commit()
-
-            return jsonify({"message": f"{event_type} event recorded", "event_id": event.id}), 201
+                return jsonify({"message": f"{event_type} event recorded", "event_id": event.id}), 201
+            except KeyError as e:
+                return jsonify({"error": f"Missing required field: {str(e)}"}), 400
+            except ValueError as e:
+                return jsonify({"error": f"Invalid data format: {str(e)}"}), 400
+            except Exception as e:
+                return jsonify({"error": f"An error occurred: {str(e)}"}), 500

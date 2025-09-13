@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import os
 import random
 from flask import Flask, current_app
@@ -128,7 +128,8 @@ def test_add_customer_event_invalid_timestamp(client):
         }
     })
     assert response.status_code == 400
-    assert b'Invalid timestamp format' in response.data
+    assert b'Invalid data format' in response.data
+    assert b'invalid-timestamp is not a valid ISO 8601 datetime string' in response.data
 
 def test_customers_page_content(client):
     response = client.get('/customers')
@@ -136,3 +137,155 @@ def test_customers_page_content(client):
     assert b'<table' in response.data  # Check if a table is present
     assert b'<th' in response.data     # Check if table headers are present
     assert b'<td' in response.data     # Check if table data cells are present
+
+def test_dashboard_page_content(client):
+    response = client.get('/dashboard')
+    assert response.status_code == 200
+    assert b'Latest Actions' in response.data  # Check for latest actions section
+    assert b'At-Risk Customers' in response.data  # Check for risky customers section
+
+def test_customer_health_page_content(client):
+    # First, create a customer to ensure one exists
+    with current_app.db_manager.get_write_session() as session:
+        from app.models import Customer
+        new_customer = Customer(name="Health Content Test Customer", segment="Enterprise")
+        session.add(new_customer)
+        session.commit()
+        customer_id = new_customer.id
+
+    response = client.get(f'/customers/{customer_id}/health')
+    assert response.status_code == 200
+    assert b'Health Breakdown' in response.data  # Check for customer health section
+    assert b'Overall Health Score' in response.data     # Check for health score presence
+
+def test_customer_detail_page_content(client):
+    # First, create a customer to ensure one exists
+    with current_app.db_manager.get_write_session() as session:
+        from app.models import Customer
+        new_customer = Customer(name="Detail Content Test Customer", segment="Startup")
+        session.add(new_customer)
+        session.commit()
+        customer_id = new_customer.id
+
+    response = client.get(f'/customers/{customer_id}')
+    assert response.status_code == 200
+    assert b'Customer Details' in response.data  # Check for customer details section
+    assert b'Detail Content Test Customer' in response.data  # Check for customer name presence
+
+def test_add_feature_event_missing_field(client):
+    # First, create a customer to ensure one exists
+    with current_app.db_manager.get_write_session() as session:
+        from app.models import Customer
+        new_customer = Customer(name="Feature Event Test Customer", segment="SMB")
+        session.add(new_customer)
+        session.commit()
+        customer_id = new_customer.id
+
+    # Add a feature event without feature_name
+    response = client.post(f'/customers/{customer_id}/events', json={
+        "event_type": "feature",
+        "data": {
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    })
+    assert response.status_code == 400  # Should return bad request due to missing field
+    assert b'Missing required field' in response.data
+
+def test_add_feature_event_success(client):
+    # First, create a customer to ensure one exists
+    with current_app.db_manager.get_write_session() as session:
+        from app.models import Customer
+        new_customer = Customer(name="Feature Event Success Test Customer", segment="Enterprise")
+        session.add(new_customer)
+        session.commit()
+        customer_id = new_customer.id
+
+    # Add a feature event with all required fields
+    response = client.post(f'/customers/{customer_id}/events', json={
+        "event_type": "feature",
+        "data": {
+            "feature_name": "Advanced Analytics",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    })
+    assert response.status_code == 201  # Should return created status
+    assert b'event recorded' in response.data
+
+def test_add_ticket_event_success(client):
+    # First, create a customer to ensure one exists
+    with current_app.db_manager.get_write_session() as session:
+        from app.models import Customer
+        new_customer = Customer(name="Ticket Event Success Test Customer", segment="Startup")
+        session.add(new_customer)
+        session.commit()
+        customer_id = new_customer.id
+
+    # Add a ticket event with all required fields
+    response = client.post(f'/customers/{customer_id}/events', json={
+        "event_type": "ticket",
+        "data": {
+            "status": "open",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+    })
+    assert response.status_code == 201  # Should return created status
+    assert b'event recorded' in response.data
+
+def test_add_invoice_event_success(client):
+    # First, create a customer to ensure one exists
+    with current_app.db_manager.get_write_session() as session:
+        from app.models import Customer
+        new_customer = Customer(name="Invoice Event Success Test Customer", segment="Enterprise")
+        session.add(new_customer)
+        session.commit()
+        customer_id = new_customer.id
+
+    # Add an invoice event with all required fields
+    response = client.post(f'/customers/{customer_id}/events', json={
+        "event_type": "invoice",
+        "data": {
+            "issued_at": (datetime.now(timezone.utc) - timedelta(days=30)).isoformat(),
+            "due_date": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
+            "amount": 1500.00,
+            "status": "paid",
+            "paid_date": (datetime.now(timezone.utc) - timedelta(days=15)).isoformat()
+        }
+    })
+    assert response.status_code == 201  # Should return created status
+    assert b'event recorded' in response.data
+
+def test_risky_customers_in_dashboard(client):
+    # Create a customer with low health score to ensure they appear in risky customers
+    with current_app.db_manager.get_write_session() as session:
+        from app.models import Customer, SupportTicket
+        new_customer = Customer(name="Risky Customer", segment="SMB")
+        session.add(new_customer)
+        session.commit()
+        customer_id = new_customer.id
+
+        # Add multiple open support tickets to lower health score
+        for _ in range(5):
+            ticket = SupportTicket(customer_id=customer_id, status="open", created_at=datetime.now(timezone.utc))
+            session.add(ticket)
+        session.commit()
+
+        # Add unpaid invoices to further lower health score
+        from app.models import Invoice
+        for _ in range(3):
+            invoice = Invoice(customer_id=customer_id,
+                              issued_at=datetime.now(timezone.utc) - timedelta(days=60),
+                              due_date=datetime.now(timezone.utc) - timedelta(days=30),
+                              amount=500.00,
+                              status="unpaid")
+            session.add(invoice)
+        session.commit()
+
+    response = client.get('/dashboard')
+
+    print(response.data)  # Debugging line to inspect response content
+
+    assert response.status_code == 200
+
+    assert b'At-Risk Customers' in response.data  # Check for risky customers section
+    assert b'<td>Risky Customer</td>'  in response.data  # Ensure non-risky customers are not listed
+    assert b'<td>0.0</td>' in response.data  # Check for health score presence
