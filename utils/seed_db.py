@@ -1,10 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from random import random, choice, randint
 from faker import Faker
-from sqlalchemy import text
-from app import create_app
-from app.config import Config
-from app.models import ApiUsage, Invoice, SupportTicket, db, Customer, LoginEvent, FeatureUsage
+from app.models import ApiUsage, Invoice, SupportTicket, Customer, LoginEvent, FeatureUsage
 
 fake = Faker()
 
@@ -88,7 +85,7 @@ def seed(app=None):
                     invoice_amount = round(fake.pyfloat(min_value=1, max_value=1000), 2)
 
                     if invoice_status in ['paid', 'late']:
-                        max_seconds = int((datetime.now(timezone.utc) - invoice_due_date).total_seconds())
+                        max_seconds = int((datetime.now(timezone.utc) - invoice_issued_at).total_seconds())
                         invoice_paid_date = invoice_due_date + timedelta(seconds=randint(0, max_seconds)) if invoice_status == 'late' else invoice_due_date
                     else:
                         invoice_paid_date = None
