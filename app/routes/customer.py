@@ -8,11 +8,10 @@ customer_bp = Blueprint('customers', __name__)
 
 @customer_bp.route('/customers', methods=['GET'])
 def get_all_customers():
-    
     with current_app.db_manager.get_read_session() as session:
         customers = session.query(Customer).all()
-
         customers_with_health = []
+
         for c in customers:
             score = calculate_customer_health(session, c.id).get("health_score", 0)
             customers_with_health.append({
@@ -26,19 +25,6 @@ def get_all_customers():
             avg_health=round(sum(c['health_score'] for c in customers_with_health) / len(customers_with_health), 2) if customers_with_health else 0,
             customers=customers_with_health
         )
-
-
-        # customers = session.query(Customer).all() 
-        # if not customers:
-        #     return jsonify({'message': 'No customers in DB'}), 404
-
-        # response = []
-
-        # for customer in customers:
-        #     customer_health_score = calculate_customer_health(session, customer.id).get("health_score", 0)
-        #     response.append({**customer.to_dict(), "health": customer_health_score})
-
-        # return render_template("customers_list.html", customers=response, total_customers=len(customers),
         
 @customer_bp.route('/customers/<int:customer_id>', methods=['GET'])
 def get_customer(customer_id):
@@ -155,6 +141,12 @@ def customer_events(customer_id):
                 return jsonify({"error": "event_type is required"}), 400
             
             # Route event to the right model
+            if data.get("timestamp"):
+                try:
+                    data["timestamp"] = datetime.fromisoformat(data["timestamp"])
+                except ValueError:
+                    return jsonify({"error": "Invalid timestamp format"}), 400
+
             if event_type == "login":
                 event = LoginEvent(customer_id=customer.id, 
                                    timestamp=data.get("timestamp", datetime.now(timezone.utc)))
@@ -183,7 +175,3 @@ def customer_events(customer_id):
             session.commit()
 
             return jsonify({"message": f"{event_type} event recorded", "event_id": event.id}), 201
-    
-    elif request.method == 'GET':
-        # return all events for a customer
-        pass

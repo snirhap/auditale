@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import os
 import random
 from flask import Flask, current_app
@@ -75,3 +76,63 @@ def test_customer_health(client):
     # Test for non-existing customer
     response = client.get('/customers/99999/health')
     assert response.status_code == 404
+
+def test_add_customer_event(client):
+    # First, create a customer to ensure one exists
+    with current_app.db_manager.get_write_session() as session:
+        from app.models import Customer
+        new_customer = Customer(name="Event Test Customer", segment="Startup")
+        session.add(new_customer)
+        session.commit()
+        customer_id = new_customer.id
+
+    # Add a login event
+    response = client.post(f'/customers/{customer_id}/events', json={
+        "event_type": "login",
+        "data": {
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    })
+    assert response.status_code == 201
+    assert b'event recorded' in response.data
+
+    # Add an invalid event type
+    response = client.post(f'/customers/{customer_id}/events', json={
+        "event_type": "invalid_event",
+        "data": {}
+    })
+    assert response.status_code == 400
+
+    # Test for non-existing customer
+    response = client.post('/customers/99999/events', json={
+        "event_type": "login",
+        "data": {}
+    })
+    assert response.status_code == 404
+    assert b'Customers not exist' in response.data
+
+def test_add_customer_event_invalid_timestamp(client):
+    # First, create a customer to ensure one exists
+    with current_app.db_manager.get_write_session() as session:
+        from app.models import Customer
+        new_customer = Customer(name="Timestamp Test Customer", segment="SMB")
+        session.add(new_customer)
+        session.commit()
+        customer_id = new_customer.id
+
+    # Add a login event with invalid timestamp
+    response = client.post(f'/customers/{customer_id}/events', json={
+        "event_type": "login",
+        "data": {
+            "timestamp": "invalid-timestamp"
+        }
+    })
+    assert response.status_code == 400
+    assert b'Invalid timestamp format' in response.data
+
+def test_customers_page_content(client):
+    response = client.get('/customers')
+    assert response.status_code == 200
+    assert b'<table' in response.data  # Check if a table is present
+    assert b'<th' in response.data     # Check if table headers are present
+    assert b'<td' in response.data     # Check if table data cells are present
