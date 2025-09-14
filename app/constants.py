@@ -1,4 +1,4 @@
 class Constants:
-    NotAtRiskThreshold = 80
-    ModerateRiskThreshold = 50
-    AtRiskThreshold = 30
+    NotAtRiskThreshold = 90
+    ModerateRiskThreshold = 70
+    AtRiskThreshold = 50

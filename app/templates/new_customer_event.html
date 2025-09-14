@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>New Customer Event</title>
+    <script>
+        function showEventFields() {
+            var eventType = document.getElementById('event_type').value;
+
+            // Hide all sections and disable their inputs
+            var sections = document.querySelectorAll('.event-fields');
+            sections.forEach(function(section) {
+                section.style.display = 'none';
+                section.querySelectorAll('input, select, textarea').forEach(function(input) {
+                    input.disabled = true;
+                });
+            });
+
+            // Show the selected section and enable its inputs
+            var selectedSection = document.getElementById(eventType + '-fields');
+            if (selectedSection) {
+                selectedSection.style.display = 'block';
+                selectedSection.querySelectorAll('input, select, textarea').forEach(function(input) {
+                    input.disabled = false;
+                });
+            }
+        }
+
+        window.onload = function() {
+            showEventFields();
+            document.getElementById('event_type').addEventListener('change', showEventFields);
+        };
+    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <h1>Record New Customer {{ customer.id }} Event</h1>
+    <form action="{{ url_for('customers.record_customer_event', customer_id=customer.id) }}" method="post">
+    <label for="event_type">Event Type:</label>
+    <select name="event_type" id="event_type" required>
+        <option value="login">Login</option>
+        <option value="feature">Feature</option>
+        <option value="ticket">Ticket</option>
+        <option value="invoice">Invoice</option>
+        <option value="api">API</option>
+    </select>
+    <br><br>
+
+    <div id="login-fields" class="event-fields" style="display:none;">
+        <label for="timestamp_login">Timestamp:</label>
+        <input type="datetime-local" name="timestamp" id="timestamp_login">
+    </div>
+
+    <div id="feature-fields" class="event-fields" style="display:none;">
+        <label for="feature_name">Feature name:</label>
+        <input type="text" name="feature_name" id="feature_name"><br>
+        <label for="timestamp_feature">Timestamp:</label>
+        <input type="datetime-local" name="timestamp" id="timestamp_feature">
+    </div>
+
+    <div id="ticket-fields" class="event-fields" style="display:none;">
+            <label for="status">status:</label>
+            <input type="text" name="status" id="status"><br>
+            <label for="created_at">created_at:</label>
+            <input type="datetime-local" name="created_at" id="created_at"><br>
+            <label for="closed_at">closed_at:</label>
+            <input type="datetime-local" name="closed_at" id="closed_at"><br>
+    </div>
+        <div id="invoice-fields" class="event-fields" style="display:none;">
+        <label for="issued_at">issued_at:</label>
+        <input type="datetime-local" name="issued_at" id="issued_at" required><br>
+        <label for="due_date">due_date:</label>
+        <input type="datetime-local" name="due_date" id="due_date" required><br>
+        <label for="paid_date">paid_date:</label>
+        <input type="datetime-local" name="paid_date" id="paid_date"><br>
+        <label for="amount">amount:</label>
+        <input type="number" step="0.01" name="amount" id="amount" required><br>
+    </div>
+
+    <div id="api-fields" class="event-fields" style="display:none;">
+        <label for="endpoint">Endpoint:</label>
+        <input type="text" name="endpoint" id="endpoint"><br>
+        <label for="timestamp_api">Timestamp:</label>
+        <input type="datetime-local" name="timestamp" id="timestamp_api">
+    </div>
+    <br>
+    <button type="submit" class="btn btn-primary">Record Event</button>
+    <a href="{{ url_for('customers.get_customer', customer_id=customer.id) }}" class="btn btn-primary">Back to Customer Details</a>
+
+    </form>
+
+</body>
+</html>

@@ -5,21 +5,137 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
 <body class="container mt-5">
+    <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
     {% if customer %}
-        <h1>Customer: {{ customer.id }}</h1>
-
+        <h1>{{ customer.name }}</h1>
+        <a href="{{ url_for('customers.new_customer_event', customer_id=customer.id) }}" class="btn btn-primary">Record New Event</a>
+        <a href="{{ url_for('customers.get_customer_health', customer_id=customer.id) }}" class="btn btn-primary">View Health Score History</a>
+        
         <h3>Details</h3>
         <ul>
-            <li><strong>Name:</strong> {{ customer.name }}</li>
+            <li><strong>Id:</strong> {{ customer.id }}</li>
             <li><strong>Segment:</strong> {{ customer.segment }}</li>
             {% if health %}
                 <li><strong>Health Score:</strong> {{ health.health_score }}</li>
             {% endif %}
         </ul>
+        <h3>Logins</h3>
+        {% if customer.logins %}
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for login in customer.logins %}
+                        <tr>
+                            <td>{{ login.timestamp }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No logins found for this customer.</p>
+        {% endif %}
+        <h3>Invoices</h3>
+        {% if customer.invoices %}
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Invoice ID</th>
+                        <th>Issued At</th>
+                        <th>Due Date</th>
+                        <th>Paid Date</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for invoice in customer.invoices %}
+                        <tr>
+                            <td>{{ invoice.id }}</td>
+                            <td>{{ invoice.issued_at }}</td>
+                            <td>{{ invoice.due_date }}</td>
+                            <td>{{ invoice.paid_date }}</td>
+                            <td>{{ invoice.amount }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No invoices found for this customer.</p>
+        {% endif %}
+
+        <h3>Support Tickets</h3>
+        {% if customer.tickets %}
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Ticket ID</th>
+                        <th>Status</th>
+                        <th>Created At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ticket in customer.tickets %}
+                    <tr>
+                        <td>{{ ticket.id }}</td>
+                        <td>{{ ticket.status }}</td>
+                        <td>{{ ticket.created_at }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No support tickets found for this customer.</p>
+        {% endif %}
+
+        <h3>Feature Usages</h3>
+        {% if customer.features %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Feature Name</th>
+                    <th>Timestamp</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for feature in customer.features %}
+                    <tr>
+                        <td>{{ feature.feature_name }}</td>
+                        <td>{{ feature.timestamp }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p>No feature usages found for this customer.</p>
+        {% endif %}
+
+        <h3>API Calls</h3>
+        {% if customer.api_usage %}
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Endpoint</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for api in customer.api_usage %}
+                        <tr>
+                            <td>{{ api.api_endpoint }}</td>
+                            <td>{{ api.timestamp }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No API calls found for this customer.</p>
+        {% endif %}
     {% else %}
         <p>Customer not found.</p>
     {% endif %}
-    <a href="{{ url_for('customers.get_customer_health', customer_id=customer.id) }}" class="btn btn-primary">View Health Score History</a>
-    <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+
 </body>
 </html>

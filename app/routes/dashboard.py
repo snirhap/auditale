@@ -15,7 +15,8 @@ def dashboard():
         return render_template(
             "dashboard.html",
             latest_actions=latest,
-            risky_customers=risky
+            risky_customers=risky,
+            health_score_risk_threshold=Constants.AtRiskThreshold
         )
 
 def latest_actions():
@@ -41,16 +42,11 @@ def risky_customers():
         
         for c in customers:
             health = calculate_customer_health(session, c.id)
-            if health and health.get("health_score", 0) < Constants.NotAtRiskThreshold:
-                if health.get("health_score") >= Constants.ModerateRiskThreshold:
-                    css = "table-warning"
-                else:
-                    css = "table-danger"
-
+            if health and health.get("health_score") <= Constants.AtRiskThreshold:
                 risky_customers_list.append({
                     **c.to_dict(),
                     "health_score": health.get("health_score", 0),
-                    "css_class": css
+                    "css_class": "table-danger"
                 })
 
         return risky_customers_list
