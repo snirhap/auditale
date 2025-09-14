@@ -1,7 +1,6 @@
 from functools import wraps
-from flask import Blueprint, current_app, make_response, redirect, request, jsonify, render_template, url_for
+from flask import Blueprint, current_app, flash, make_response, redirect, request, jsonify, render_template, url_for
 from sqlalchemy import func
-
 from app.constants import Constants
 from ..models import ApiUsage, FeatureUsage, Invoice, LoginEvent, SupportTicket, Customer
 from datetime import datetime, timedelta, timezone
@@ -144,53 +143,132 @@ def record_customer_event(customer_id):
     with current_app.db_manager.get_write_session() as session:
         customer = session.query(Customer).filter_by(id=customer_id).first()
         if not customer:
-            return jsonify({'message': 'Customers not exist'}), 404
+            flash("Customer does not exist.", "danger")
+            return redirect(url_for("dashboard.dashboard"))
         
         if request.is_json:
-            print('Request is JSON')
             payload = request.get_json()
         else:
             # Convert form data into dict (like JSON shape you expect)
-            print('Request is form data')
             payload = request.form.to_dict()
         
         event_type = payload.get("event_type")
 
         if not event_type:
-            return jsonify({"error": "event_type is required"}), 400
+            flash("Event type is required.", "danger")
+            return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
         
         try:
+            print(f"Recording event for customer {customer_id}: {event_type} with payload {payload}")
+            # Login Event
             if event_type == "login":
-                event = LoginEvent(customer_id=customer.id, 
-                                    timestamp=parse_iso_datetime(payload.get("timestamp")))
+                print('Login Event')
+                ts = payload.get("timestamp")
+                if not ts:
+                    flash("Timestamp is required for login event.", "danger")
+                    return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
+                
+                if ts > datetime.now(timezone.utc).isoformat():
+                    flash("Timestamp cannot be in the future.", "danger")
+                    return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
+                timestamp = parse_iso_datetime(ts)
+                event = LoginEvent(customer_id=customer.id, timestamp=timestamp)
+            
+            # Feature Usage Event
             elif event_type == "feature":
-                event = FeatureUsage(customer_id=customer.id,
-                                        feature_name=payload["feature_name"],
-                                        timestamp=parse_iso_datetime(payload.get("timestamp")))
+                print('Feature Event')
+                fname = payload.get("feature_name")
+                ts = payload.get("timestamp")
+                if not fname or not ts:
+                    flash("Feature name and timestamp are required for feature event.", "danger")
+                    return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
+                
+                if ts > datetime.now(timezone.utc).isoformat():
+                    flash("Timestamp cannot be in the future.", "danger")
+                    return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
+                timestamp = parse_iso_datetime(ts)
+                event = FeatureUsage(customer_id=customer.id, feature_name=fname, timestamp=timestamp)
+            
+            # Support Ticket Event
             elif event_type == "ticket":
-                event = SupportTicket(customer_id=customer.id,
-                                      status=payload.get("status", "open"),
-                                      created_at=parse_iso_datetime(payload.get("created_at"),
-                                      closed_at=parse_iso_datetime(payload.get("closed_at", None))))
+                print('Ticket Event')
+                created_at = payload.get("created_at")
+                if not created_at:
+                    flash("created_at is required for ticket event.", "danger")
+                    return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
+                
+                closed_at = payload.get("closed_at")
+                if created_at and closed_at:
+                    created_dt = parse_iso_datetime(created_at)
+                    closed_dt = parse_iso_datetime(closed_at)
+                    if closed_dt < created_dt:
+                        flash("closed_at cannot be before created_at.", "danger")
+                        return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
+        
+                event = SupportTicket(
+                    customer_id=customer.id,
+                    status=payload.get("status", "open"),
+                    created_at=parse_iso_datetime(created_at),
+                    closed_at=parse_iso_datetime(closed_at, allow_none=True)
+                )
+
+            # Invoice Event
             elif event_type == "invoice":
-                event = Invoice(customer_id=customer.id,
-                                issued_at=parse_iso_datetime(payload.get("issued_at")),
-                                due_date=parse_iso_datetime(payload.get("due_date")),
-                                amount=payload["amount"],
-                                status=payload.get("status", "unpaid"),
-                                paid_date=parse_iso_datetime(payload.get("paid_date")))
+                print('Invoice Event')
+                required_fields = ["issued_at", "due_date", "amount"]
+                missing = [f for f in required_fields if f not in payload or payload[f] in [None, ""]]
+                if missing:
+                    flash(f"Missing required fields for invoice event: {', '.join(missing)}", "danger")
+                    return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
+                
+                if payload["issued_at"] > datetime.now(timezone.utc).isoformat():
+                    flash("issued_at cannot be in the future.", "danger")
+                    return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
+                if payload["due_date"] < payload["issued_at"]:
+                    flash("due_date cannot be before issued_at.", "danger")
+                    return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
+                
+                try:
+                    amount = float(payload["amount"])
+                    if amount < 0:
+                        flash("Amount must be positive.", "danger")
+                        return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
+                except ValueError:
+                    flash("Amount must be a valid number.", "danger")
+                    return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
+
+                event = Invoice(
+                    customer_id=customer.id,
+                    issued_at=parse_iso_datetime(payload["issued_at"]),
+                    due_date=parse_iso_datetime(payload["due_date"]),
+                    amount=amount,
+                    status=payload.get("status", "unpaid"),
+                    paid_date=parse_iso_datetime(payload.get("paid_date"))
+                )
+            
+            # API Usage Event
             elif event_type == "api":
-                if "endpoint" not in payload:
-                    return jsonify({"error": "endpoint is required for api event"}), 400
-                event = ApiUsage(customer_id=customer.id,
-                                 api_endpoint=payload["endpoint"],
-                                 timestamp=parse_iso_datetime(payload.get("timestamp")))
+                print('API Usage Event')
+                endpoint = payload.get("endpoint")
+                ts = payload.get("timestamp")
+                if not endpoint or not ts:
+                    flash("Endpoint and timestamp are required for API event.", "danger")
+                    return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
+                
+                if ts > datetime.now(timezone.utc).isoformat():
+                    flash("Timestamp cannot be in the future.", "danger")
+                    return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
+                
+                timestamp = parse_iso_datetime(ts)
+                event = ApiUsage(customer_id=customer.id, api_endpoint=endpoint, timestamp=timestamp)
             else:
-                return jsonify({"error": f"Unknown event_type {event_type}"}), 400
+                flash(f"Unknown event type: {event_type}", "danger")
+                return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
             
             session.add(event)
             session.commit()
-
+            print(f"Event recorded: {event}")
+            flash(f"{event_type.capitalize()} event recorded successfully.", "success")
             return redirect(url_for("customers.get_customer", customer_id=customer_id))
 
         except KeyError as e:

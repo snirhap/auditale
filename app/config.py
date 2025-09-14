@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
+    SECRET_KEY = os.getenv("SECRET_KEY")
     FLASK_ENV = os.getenv("FLASK_ENV", "development")
     POSTGRES_USER = os.getenv("POSTGRESQL_USERNAME", "postgres")
     POSTGRES_PASSWORD = os.getenv("POSTGRESQL_PASSWORD", "postgres")
