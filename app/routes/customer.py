@@ -204,12 +204,16 @@ def record_customer_event(customer_id):
                     if closed_dt < created_dt:
                         flash("closed_at cannot be before created_at.", "danger")
                         return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
-        
+                
+                if created_at > datetime.now(timezone.utc).isoformat() or (closed_at and closed_at > datetime.now(timezone.utc).isoformat()):
+                    flash("created_at and closed_at cannot be in the future.", "danger")
+                    return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
+                
                 event = SupportTicket(
                     customer_id=customer.id,
                     status=payload.get("status", "open"),
                     created_at=parse_iso_datetime(created_at),
-                    closed_at=parse_iso_datetime(closed_at, allow_none=True)
+                    closed_at=parse_iso_datetime(closed_at)
                 )
 
             # Invoice Event
