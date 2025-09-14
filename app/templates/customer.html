@@ -113,14 +113,14 @@
             <nav>
                 <ul class="pagination">
                     {% if ticket_page > 1 %}
-                    <li class="page-item">
-                    <a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page, ticket_page=ticket_page-1, api_page=api_page) }}">Previous</a>
-                    </li>
+                        <li class="page-item">
+                        <a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page, ticket_page=ticket_page-1, api_page=api_page) }}">Previous</a>
+                        </li>
                     {% endif %}
                     {% if ticket_page * per_page < total_tickets %}
-                    <li class="page-item">
-                    <a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page, ticket_page=ticket_page+1, api_page=api_page) }}">Next</a>
-                    </li>
+                        <li class="page-item">
+                        <a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page, ticket_page=ticket_page+1, api_page=api_page) }}">Next</a>
+                        </li>
                     {% endif %}
                 </ul>
             </nav>

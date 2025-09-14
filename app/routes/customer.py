@@ -10,7 +10,7 @@ customer_bp = Blueprint('customers', __name__)
 @customer_bp.route('/customers', methods=['GET'])
 def list_customers():
     customers_page = request.args.get('page', 1, type=int)
-    per_page = 50  # items per page
+    per_page = 20  # items per page
 
     sort_by = request.args.get("sort_by", "name")  # default sort
     order = request.args.get("order", "asc")
