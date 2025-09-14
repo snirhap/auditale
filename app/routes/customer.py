@@ -1,6 +1,8 @@
 from functools import wraps
 from flask import Blueprint, current_app, make_response, redirect, request, jsonify, render_template, url_for
 from sqlalchemy import func
+
+from app.constants import Constants
 from ..models import ApiUsage, FeatureUsage, Invoice, LoginEvent, SupportTicket, Customer
 from datetime import datetime, timedelta, timezone
 
@@ -83,14 +85,12 @@ def calculate_customer_health(session, customer_id):
     api_score = min(api_calls * 10, 100)  # 10+ calls == maximum points
 
     # Final weighted score
-    # FIXME: Weights can be adjusted by configuration
-    # FIXME: Make thresholds as a new table in DB (new model CustomerHealthThresholds)
     health_score = (
-        login_score * 0.25 +
-        adoption_score * 0.25 +
-        ticket_score * 0.2 +
-        invoice_score * 0.2 +
-        api_score * 0.1
+        login_score * Constants.LOGIN_WEIGHT +
+        adoption_score * Constants.FEATURE_ADOPTION_WEIGHT +
+        ticket_score * Constants.SUPPORT_TICKET_WEIGHT +
+        invoice_score * Constants.INVOICE_WEIGHT +
+        api_score * Constants.API_USAGE_WEIGHT
     )
 
     return {
@@ -133,14 +133,11 @@ def parse_iso_datetime(date_str):
 
 @customer_bp.route("/customers/<int:customer_id>/events/new", methods=['GET'])
 def new_customer_event(customer_id):
-    """Render a form to record a new customer event."""
     with current_app.db_manager.get_read_session() as session:
         customer = session.query(Customer).filter_by(id=customer_id).first()
         if not customer:
             return jsonify({"message": "Customer does not exist"}), 404
         return render_template("new_customer_event.html", customer=customer)
-
-
 
 @customer_bp.route('/customers/<int:customer_id>/events', methods=['POST'])
 def record_customer_event(customer_id):
@@ -157,7 +154,6 @@ def record_customer_event(customer_id):
             print('Request is form data')
             payload = request.form.to_dict()
         
-        print('Payload:', payload)
         event_type = payload.get("event_type")
 
         if not event_type:
@@ -196,7 +192,7 @@ def record_customer_event(customer_id):
             session.commit()
 
             return redirect(url_for("customers.get_customer", customer_id=customer_id))
-            # return jsonify({"message": f"{event_type} event recorded", "event_id": event.id}), 201
+
         except KeyError as e:
             return jsonify({"error": f"Missing required field: {str(e)}"}), 400
         except ValueError as e:
