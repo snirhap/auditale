@@ -236,7 +236,7 @@ def record_customer_event(customer_id):
                 try:
                     amount = float(payload["amount"])
                     if amount < 0:
-                        flash("Amount must be positive.", "danger")
+                        flash("Amount must be positive", "danger")
                         return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
                 except ValueError:
                     flash("Amount must be a valid number.", "danger")
