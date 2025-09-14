@@ -2,6 +2,7 @@ from functools import wraps
 from flask import Blueprint, current_app, jsonify, render_template
 from app.routes.customer import calculate_customer_health
 from ..models import ApiUsage, FeatureUsage, Invoice, LoginEvent, SupportTicket, Customer
+from ..constants import Constants
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -36,15 +37,20 @@ def latest_actions():
 def risky_customers():
     with current_app.db_manager.get_read_session() as session:
         customers = session.query(Customer).all()
-
-        risky_threshold = 40  # Define threshold for risky customers
         risky_customers_list = []
+        
         for c in customers:
             health = calculate_customer_health(session, c.id)
-            if health and health.get("health_score", 0) < risky_threshold:
+            if health and health.get("health_score", 0) < Constants.NotAtRiskThreshold:
+                if health.get("health_score") >= Constants.ModerateRiskThreshold:
+                    css = "table-warning"
+                else:
+                    css = "table-danger"
+
                 risky_customers_list.append({
                     **c.to_dict(),
-                    "health_score": health.get("health_score", 0)
+                    "health_score": health.get("health_score", 0),
+                    "css_class": css
                 })
 
         return risky_customers_list

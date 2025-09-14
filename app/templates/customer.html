@@ -19,7 +19,7 @@
     {% else %}
         <p>Customer not found.</p>
     {% endif %}
-
+    <a href="{{ url_for('customers.get_customer_health', customer_id=customer.id) }}" class="btn btn-primary">View Health Score History</a>
     <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
 </body>
 </html>

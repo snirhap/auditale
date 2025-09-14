@@ -107,7 +107,7 @@
         </thead>
         <tbody>
             {% for customer in risky_customers %}
-                <tr>
+                <tr class="{{ customer.css_class }}">
                     <td>{{ customer.id }}</td>
                     <td>{{ customer.name }}</td>
                     <td>{{ customer.health_score }}</td>
