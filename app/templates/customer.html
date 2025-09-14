@@ -27,7 +27,7 @@
             {% endif %}
         </ul>
         <h3>Logins</h3>
-        {% if customer.logins %}
+        {% if logins %}
             <table class="table table-striped">
                 <thead>
                     <tr>
@@ -35,7 +35,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for login in customer.logins %}
+                    {% for login in logins %}
                         <tr>
                             <td>{{ login.timestamp }}</td>
                         </tr>
@@ -45,8 +45,9 @@
         {% else %}
             <p>No logins found for this customer.</p>
         {% endif %}
+
         <h3>Invoices</h3>
-        {% if customer.invoices %}
+        {% if invoices %}
             <table class="table table-striped">
                 <thead>
                     <tr>
@@ -58,7 +59,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for invoice in customer.invoices %}
+                    {% for invoice in invoices %}
                         <tr>
                             <td>{{ invoice.id }}</td>
                             <td>{{ invoice.issued_at }}</td>
@@ -69,12 +70,26 @@
                     {% endfor %}
                 </tbody>
             </table>
+            <nav>
+                <ul class="pagination">
+                    {% if invoice_page > 1 %}
+                        <li class="page-item">
+                        <a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page-1, ticket_page=ticket_page, api_page=api_page) }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    {% if invoice_page * per_page < total_invoices %}
+                        <li class="page-item">
+                        <a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page+1, ticket_page=ticket_page, api_page=api_page) }}">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
         {% else %}
             <p>No invoices found for this customer.</p>
         {% endif %}
 
         <h3>Support Tickets</h3>
-        {% if customer.tickets %}
+        {% if tickets %}
             <table class="table table-striped">
                 <thead>
                     <tr>
@@ -85,7 +100,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for ticket in customer.tickets %}
+                    {% for ticket in tickets %}
                     <tr>
                         <td>{{ ticket.id }}</td>
                         <td>{{ ticket.status }}</td>
@@ -95,12 +110,26 @@
                     {% endfor %}
                 </tbody>
             </table>
+            <nav>
+                <ul class="pagination">
+                    {% if ticket_page > 1 %}
+                    <li class="page-item">
+                    <a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page, ticket_page=ticket_page-1, api_page=api_page) }}">Previous</a>
+                    </li>
+                    {% endif %}
+                    {% if ticket_page * per_page < total_tickets %}
+                    <li class="page-item">
+                    <a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page, ticket_page=ticket_page+1, api_page=api_page) }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
         {% else %}
             <p>No support tickets found for this customer.</p>
         {% endif %}
 
         <h3>Feature Usages</h3>
-        {% if customer.features %}
+        {% if features %}
         <table class="table table-striped">
             <thead>
                 <tr>
@@ -109,7 +138,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for feature in customer.features %}
+                {% for feature in features %}
                     <tr>
                         <td>{{ feature.feature_name }}</td>
                         <td>{{ feature.timestamp }}</td>
@@ -122,7 +151,7 @@
         {% endif %}
 
         <h3>API Calls</h3>
-        {% if customer.api_usage %}
+        {% if apis %}
             <table class="table table-striped">
                 <thead>
                     <tr>
@@ -131,7 +160,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for api in customer.api_usage %}
+                    {% for api in apis %}
                         <tr>
                             <td>{{ api.api_endpoint }}</td>
                             <td>{{ api.timestamp }}</td>
@@ -139,6 +168,20 @@
                     {% endfor %}
                 </tbody>
             </table>
+            <nav>
+                <ul class="pagination">
+                    {% if api_page > 1 %}
+                    <li class="page-item">
+                    <a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page, ticket_page=ticket_page, api_page=api_page-1) }}">Previous</a>
+                    </li>
+                    {% endif %}
+                    {% if api_page * per_page < total_apis %}
+                    <li class="page-item">
+                    <a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page, ticket_page=ticket_page, api_page=api_page+1) }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
         {% else %}
             <p>No API calls found for this customer.</p>
         {% endif %}

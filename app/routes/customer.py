@@ -29,15 +29,96 @@ def get_all_customers():
         
 @customer_bp.route('/customers/<int:customer_id>', methods=['GET'])
 def get_customer(customer_id):
+    logins_page = request.args.get('logins_page', 1, type=int)
+    invoice_page = request.args.get('invoice_page', 1, type=int)
+    ticket_page = request.args.get('ticket_page', 1, type=int)
+    api_page = request.args.get('api_page', 1, type=int)
+    feature_page = request.args.get('feature_page', 1, type=int)
+    per_page = 5  # items per page
+
     with current_app.db_manager.get_read_session() as session:
         customer = session.query(Customer).filter_by(id=customer_id).first()
         if not customer:
             return render_template("customer.html", customer=None, health=None), 404
+        
+        # Paginate logins
+        logins = (
+            session.query(LoginEvent)
+            .filter_by(customer_id=customer_id)
+            .order_by(LoginEvent.timestamp.desc())
+            .offset((api_page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+        total_logins = session.query(LoginEvent).filter_by(customer_id=customer_id).count()
+
+        # Paginate invoices
+        invoices = (
+            session.query(Invoice)
+            .filter_by(customer_id=customer_id)
+            .order_by(Invoice.issued_at.desc())
+            .offset((invoice_page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+        print(f'Fetched {len(invoices)} invoices for customer {customer_id}')  # Debugging line
+        total_invoices = session.query(Invoice).filter_by(customer_id=customer_id).count()
+        
+        # Paginate tickets
+        tickets = (
+            session.query(SupportTicket)
+            .filter_by(customer_id=customer_id)
+            .order_by(SupportTicket.created_at.desc())
+            .offset((ticket_page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+        total_tickets = session.query(SupportTicket).filter_by(customer_id=customer_id).count()
+
+        # Paginate API calls
+        apis = (
+            session.query(ApiUsage)
+            .filter_by(customer_id=customer_id)
+            .order_by(ApiUsage.timestamp.desc())
+            .offset((api_page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+        total_apis = session.query(ApiUsage).filter_by(customer_id=customer_id).count()
+        
+        # Paginate feature usages
+        features = (
+            session.query(FeatureUsage)
+            .filter_by(customer_id=customer_id)
+            .order_by(FeatureUsage.timestamp.desc())
+            .offset((api_page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+        total_features = session.query(FeatureUsage).filter_by(customer_id=customer_id).count()
 
         # Calculate health
         health_details = calculate_customer_health(session, customer_id)
 
-        return render_template("customer.html", customer=customer, health=health_details), 200
+        return render_template("customer.html", 
+                               customer=customer,
+                               logins=logins,
+                               invoices=invoices,
+                               tickets=tickets,
+                               apis=apis,
+                               features=features,
+                               logins_page=logins_page,
+                               invoice_page=invoice_page,
+                               ticket_page=ticket_page,
+                               api_page=api_page,
+                               feature_page=feature_page,
+                               per_page=per_page,
+                               total_logins=total_logins,
+                               total_invoices=total_invoices,
+                               total_tickets=total_tickets,
+                               total_apis=total_apis,
+                               total_features=total_features,
+                               health=health_details), 200
 
 def calculate_customer_health(session, customer_id):
     customer = session.query(Customer).filter_by(id=customer_id).first()

@@ -104,6 +104,8 @@ flask db upgrade
 
 ### Seed test/fake data:
 
+I build a tool to seed "realistic" data into the database (happens automatically in testing env), the tool running in background is:
+
 ```python -m app.utils.seed_db```
 
 ## Routes / Endpoints
