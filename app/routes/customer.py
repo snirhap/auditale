@@ -9,6 +9,9 @@ customer_bp = Blueprint('customers', __name__)
 
 @customer_bp.route('/customers', methods=['GET'])
 def list_customers():
+    customers_page = request.args.get('page', 1, type=int)
+    per_page = 50  # items per page
+
     sort_by = request.args.get("sort_by", "name")  # default sort
     order = request.args.get("order", "asc")
     
@@ -34,11 +37,21 @@ def list_customers():
         else:  # default sort by name
             customers_with_health.sort(key=lambda x: x["name"].lower(), reverse=(order=="desc"))
 
+        # Paginate in Python
+        start = (customers_page - 1) * per_page
+        end = start + per_page
+        paginated_customers_with_health = customers_with_health[start:end]
+        total_pages = (len(customers_with_health) + per_page - 1) // per_page
+
         return render_template(
             "customers_list.html",
             total_customers=len(customers),
             avg_health=round(sum(c['health_score'] for c in customers_with_health) / len(customers_with_health), 2) if customers_with_health else 0,
-            customers=customers_with_health
+            customers=paginated_customers_with_health,
+            page=customers_page,
+            total_pages=total_pages,
+            sort_by=sort_by,
+            order=order
         )
         
 @customer_bp.route('/customers/<int:customer_id>', methods=['GET'])
