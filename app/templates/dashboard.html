@@ -16,6 +16,10 @@
 
     <a href="{{ url_for('customers.get_all_customers') }}" class="btn btn-primary mb-4">View All Customers</a>
 
+    <form action="{{ url_for('dashboard.seed_database') }}" method="POST">
+        <button type="submit" class="btn btn-warning">Seed Database</button>
+    </form>
+
     <h2>Latest Actions</h2>
     <p></p>
     <h3>Latest Logins</h3>

@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import Blueprint, current_app, jsonify, render_template
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, url_for
 from app.routes.customer import calculate_customer_health
 from ..models import ApiUsage, FeatureUsage, Invoice, LoginEvent, SupportTicket, Customer
 from ..constants import Constants
@@ -18,6 +18,13 @@ def dashboard():
             risky_customers=risky,
             health_score_risk_threshold=Constants.AtRiskThreshold
         )
+
+@dashboard_bp.route("/dashboard/seed", methods=["POST"])
+def seed_database():
+    from utils.seed_db import seed
+    seed(current_app)
+    flash("Database seeded successfully.", "success")
+    return redirect(url_for("dashboard.dashboard"))
 
 def latest_actions():
     with current_app.db_manager.get_read_session() as session:

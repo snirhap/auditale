@@ -128,3 +128,7 @@ flask db upgrade
  Pytest is used for automated tests.
 
  ```pytest```
+
+* Tests create temporary customers & events in a SQLite test DB
+* Covers both JSON API and HTML form submissions
+* Ensures validation & flash messages work

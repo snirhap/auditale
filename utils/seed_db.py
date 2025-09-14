@@ -1,18 +1,19 @@
 from datetime import datetime, timedelta, timezone
 from random import random, choice, randint
 from faker import Faker
+from sqlalchemy import inspect
 from app.models import ApiUsage, Invoice, SupportTicket, Customer, LoginEvent, FeatureUsage
 
 fake = Faker()
 
 TRUNCATE_FIRST = True
-NEW_CUSTOMERS = 10
+NEW_CUSTOMERS = 100
 DAYS_HISTORY = 90
-MAX_LOGINS_PER_CUSTOMER = 15
-MAX_FEATURES_PER_CUSTOMER = 20
-MAX_CUSTOMER_TICKETS = 5
-MAX_CUSTOMER_INVOICES = 5
-MAX_API_CALLS = 50
+MAX_LOGINS_PER_CUSTOMER = 150
+MAX_FEATURES_PER_CUSTOMER = 200
+MAX_CUSTOMER_TICKETS = 50
+MAX_CUSTOMER_INVOICES = 50
+MAX_API_CALLS = 200
 FEATURE_NAMES = ["Dashboard", "Reports", "Messages", "Notifications", "Documentation"]
 SEGMENTS = ["Enterprise", "SMB", "Startup", "Bootstrap", "Private"]
 API_ENDPOINTS = ["login", "register", "get_report", "update_profile", "fetch_data", "graphs", "alerts"]
@@ -27,8 +28,11 @@ def seed(app=None):
         with app.db_manager.get_write_session() as session:
 
             if TRUNCATE_FIRST:
+                inspector = inspect(session.bind)
+
                 for table in [ApiUsage, FeatureUsage, Invoice, LoginEvent, SupportTicket, Customer]:
-                    session.query(table).delete()
+                    if inspector.has_table(table.__tablename__):
+                        session.query(table).delete()
                 session.commit()
 
             customers = []
