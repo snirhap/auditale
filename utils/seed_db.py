@@ -6,7 +6,7 @@ from app.models import ApiUsage, Invoice, SupportTicket, Customer, LoginEvent, F
 
 fake = Faker()
 
-TRUNCATE_FIRST = True
+TRUNCATE_FIRST = False
 NEW_CUSTOMERS = 100
 DAYS_HISTORY = 90
 MAX_LOGINS_PER_CUSTOMER = 150

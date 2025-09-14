@@ -8,13 +8,19 @@
     <h1>Customers List</h1>
     <p><strong>Total Customers:</strong> {{ total_customers }}</p>
     <p><strong>Average Health Score:</strong> {{ avg_health }}</p>
-
+    <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
     <h2>Customers</h2>
     <table class="table table-striped">
         <thead>
             <tr>
-                <th>Name</th>
-                <th>Health Score</th>
+                <th>
+                    <a href="{{ url_for('customers.list_customers', sort_by='name', order='asc') }}">Name ▲</a>
+                    <a href="{{ url_for('customers.list_customers', sort_by='name', order='desc') }}">▼</a>
+                </th>
+                <th>
+                    <a href="{{ url_for('customers.list_customers', sort_by='health_score', order='asc') }}">Health ▲</a>
+                    <a href="{{ url_for('customers.list_customers', sort_by='health_score', order='desc') }}">▼</a>
+                </th>
             </tr>
         </thead>
         <tbody>
@@ -34,6 +40,5 @@
             {% endfor %}
         </tbody>
     </table>
-    <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
 </body>
 </html>

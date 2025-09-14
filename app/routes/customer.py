@@ -1,6 +1,6 @@
 from functools import wraps
 from flask import Blueprint, current_app, flash, make_response, redirect, request, jsonify, render_template, url_for
-from sqlalchemy import func
+from sqlalchemy import desc, func
 from app.constants import Constants
 from ..models import ApiUsage, FeatureUsage, Invoice, LoginEvent, SupportTicket, Customer
 from datetime import datetime, timedelta, timezone
@@ -8,9 +8,17 @@ from datetime import datetime, timedelta, timezone
 customer_bp = Blueprint('customers', __name__)
 
 @customer_bp.route('/customers', methods=['GET'])
-def get_all_customers():
+def list_customers():
+    sort_by = request.args.get("sort_by", "name")  # default sort
+    order = request.args.get("order", "asc")
+    
+    # Prevent SQL injection by allowing only specific columns
+    if sort_by not in ["name", "health_score"]:
+        sort_by = "name"
+    
     with current_app.db_manager.get_read_session() as session:
         customers = session.query(Customer).all()
+
         customers_with_health = []
 
         for c in customers:
@@ -19,6 +27,12 @@ def get_all_customers():
                 **c.to_dict(),
                 "health_score": score
             })
+        
+        # Sort in Python
+        if sort_by == "health_score":
+            customers_with_health.sort(key=lambda x: x["health_score"], reverse=(order=="desc"))
+        else:  # default sort by name
+            customers_with_health.sort(key=lambda x: x["name"].lower(), reverse=(order=="desc"))
 
         return render_template(
             "customers_list.html",
