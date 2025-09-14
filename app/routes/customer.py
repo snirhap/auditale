@@ -44,7 +44,7 @@ def calculate_customer_health(session, customer_id):
     if not customer:
         return None
     
-    now = datetime.now(timezone.utc)
+    now = datetime.now()
     last_30d = now - timedelta(days=30)
 
     # Login frequency (last 30 days)
@@ -129,7 +129,6 @@ def parse_iso_datetime(date_str):
     except ValueError:
         raise ValueError(f"{date_str} is not a valid ISO 8601 datetime string")
 
-
 @customer_bp.route("/customers/<int:customer_id>/events/new", methods=['GET'])
 def new_customer_event(customer_id):
     with current_app.db_manager.get_read_session() as session:
@@ -157,81 +156,83 @@ def record_customer_event(customer_id):
         if not event_type:
             flash("Event type is required.", "danger")
             return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
-        
+
         try:
-            print(f"Recording event for customer {customer_id}: {event_type} with payload {payload}")
             # Login Event
             if event_type == "login":
-                print('Login Event')
                 ts = payload.get("timestamp")
                 if not ts:
                     flash("Timestamp is required for login event.", "danger")
                     return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
                 
-                if ts > datetime.now(timezone.utc).isoformat():
+                timestamp = parse_iso_datetime(ts)
+                if timestamp > datetime.now():
                     flash("Timestamp cannot be in the future.", "danger")
                     return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
-                timestamp = parse_iso_datetime(ts)
                 event = LoginEvent(customer_id=customer.id, timestamp=timestamp)
             
             # Feature Usage Event
             elif event_type == "feature":
-                print('Feature Event')
                 fname = payload.get("feature_name")
                 ts = payload.get("timestamp")
                 if not fname or not ts:
                     flash("Feature name and timestamp are required for feature event.", "danger")
                     return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
                 
-                if ts > datetime.now(timezone.utc).isoformat():
+                timestamp = parse_iso_datetime(ts)
+
+                if timestamp > datetime.now():
                     flash("Timestamp cannot be in the future.", "danger")
                     return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
-                timestamp = parse_iso_datetime(ts)
+                
                 event = FeatureUsage(customer_id=customer.id, feature_name=fname, timestamp=timestamp)
             
             # Support Ticket Event
             elif event_type == "ticket":
-                print('Ticket Event')
                 created_at = payload.get("created_at")
+                closed_at = payload.get("closed_at")
                 if not created_at:
                     flash("created_at is required for ticket event.", "danger")
                     return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
+
+                created_dt = parse_iso_datetime(created_at)
+                closed_dt = parse_iso_datetime(closed_at) if closed_at else None
                 
-                closed_at = payload.get("closed_at")
-                if created_at and closed_at:
-                    created_dt = parse_iso_datetime(created_at)
-                    closed_dt = parse_iso_datetime(closed_at)
-                    if closed_dt < created_dt:
-                        flash("closed_at cannot be before created_at.", "danger")
-                        return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
-                
-                if created_at > datetime.now(timezone.utc).isoformat() or (closed_at and closed_at > datetime.now(timezone.utc).isoformat()):
-                    flash("created_at and closed_at cannot be in the future.", "danger")
+                if closed_dt and closed_dt < created_dt:
+                    flash("closed_at cannot be before created_at.", "danger")
                     return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
-                
+
+                if created_dt > datetime.now() or (closed_dt and closed_dt > datetime.now()):
+                    flash("created_at or closed_at cannot be in the future.", "danger")
+                    return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
+
                 event = SupportTicket(
                     customer_id=customer.id,
                     status=payload.get("status", "open"),
-                    created_at=parse_iso_datetime(created_at),
-                    closed_at=parse_iso_datetime(closed_at)
+                    created_at=created_dt,
+                    closed_at=closed_dt
                 )
 
             # Invoice Event
             elif event_type == "invoice":
-                print('Invoice Event')
                 required_fields = ["issued_at", "due_date", "amount"]
                 missing = [f for f in required_fields if f not in payload or payload[f] in [None, ""]]
+                
                 if missing:
                     flash(f"Missing required fields for invoice event: {', '.join(missing)}", "danger")
                     return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
                 
-                if payload["issued_at"] > datetime.now(timezone.utc).isoformat():
+                issued_at = parse_iso_datetime(payload.get("issued_at"))
+                due_date = parse_iso_datetime(payload.get("due_date"))
+
+                if issued_at > datetime.now():
                     flash("issued_at cannot be in the future.", "danger")
                     return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
+                
                 if payload["due_date"] < payload["issued_at"]:
                     flash("due_date cannot be before issued_at.", "danger")
                     return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
-                
+
                 try:
                     amount = float(payload["amount"])
                     if amount < 0:
@@ -243,8 +244,8 @@ def record_customer_event(customer_id):
 
                 event = Invoice(
                     customer_id=customer.id,
-                    issued_at=parse_iso_datetime(payload["issued_at"]),
-                    due_date=parse_iso_datetime(payload["due_date"]),
+                    issued_at=issued_at,
+                    due_date=due_date,
                     amount=amount,
                     status=payload.get("status", "unpaid"),
                     paid_date=parse_iso_datetime(payload.get("paid_date"))
@@ -259,7 +260,7 @@ def record_customer_event(customer_id):
                     flash("Endpoint and timestamp are required for API event.", "danger")
                     return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
                 
-                if ts > datetime.now(timezone.utc).isoformat():
+                if ts > datetime.now().isoformat():
                     flash("Timestamp cannot be in the future.", "danger")
                     return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
                 
@@ -271,13 +272,14 @@ def record_customer_event(customer_id):
             
             session.add(event)
             session.commit()
-            print(f"Event recorded: {event}")
             flash(f"{event_type.capitalize()} event recorded successfully.", "success")
             return redirect(url_for("customers.get_customer", customer_id=customer_id))
-
         except KeyError as e:
-            return jsonify({"error": f"Missing required field: {str(e)}"}), 400
+            flash(f"Missing required field: {str(e)}", "danger")
+            return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
         except ValueError as e:
-            return jsonify({"error": f"Invalid data format: {str(e)}"}), 400
+            flash(f"Invalid data format: {str(e)}", "danger")
+            return redirect(url_for("customers.new_customer_event", customer_id=customer_id))
         except Exception as e:
-            return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+            flash(f"An error occurred: {str(e)}", "danger")
+            return redirect(url_for("customers.new_customer_event", customer_id=customer_id))

@@ -89,29 +89,29 @@ def test_add_customer_event(client):
     # Add a login event
     response = client.post(f'/customers/{customer_id}/events', json={
         "event_type": "login",
-        "data": {
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
-    })
-    assert response.status_code == 201
-    assert b'event recorded' in response.data
+        "timestamp": datetime.now().isoformat()
+    }, follow_redirects=True)
+
+    assert b'event recorded successfully' in response.data
 
     # Add an invalid event type
     response = client.post(f'/customers/{customer_id}/events', json={
         "event_type": "invalid_event",
-        "data": {}
-    })
-    assert response.status_code == 400
+        "timestamp": datetime.now().isoformat()
+    }, follow_redirects=True)
+
+    assert b'Unknown event type' in response.data
 
     # Test for non-existing customer
     response = client.post('/customers/99999/events', json={
         "event_type": "login",
-        "data": {}
-    })
-    assert response.status_code == 404
-    assert b'Customers not exist' in response.data
+        "timestamp": datetime.now().isoformat()
+    }, follow_redirects=True)
 
-def test_add_customer_event_invalid_timestamp(client):
+    assert b'Customer does not exist' in response.data
+
+
+def test_invalid_timestamp(client):
     # First, create a customer to ensure one exists
     with current_app.db_manager.get_write_session() as session:
         from app.models import Customer
@@ -123,13 +123,10 @@ def test_add_customer_event_invalid_timestamp(client):
     # Add a login event with invalid timestamp
     response = client.post(f'/customers/{customer_id}/events', json={
         "event_type": "login",
-        "data": {
-            "timestamp": "invalid-timestamp"
-        }
-    })
-    assert response.status_code == 400
-    assert b'Invalid data format' in response.data
-    assert b'invalid-timestamp is not a valid ISO 8601 datetime string' in response.data
+        "timestamp": "invalid-timestamp"
+    }, follow_redirects=True)
+
+    assert b"Invalid data format" in response.data
 
 def test_customers_page_content(client):
     response = client.get('/customers')
@@ -184,12 +181,10 @@ def test_add_feature_event_missing_field(client):
     # Add a feature event without feature_name
     response = client.post(f'/customers/{customer_id}/events', json={
         "event_type": "feature",
-        "data": {
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
-    })
-    assert response.status_code == 400  # Should return bad request due to missing field
-    assert b'Missing required field' in response.data
+        "timestamp": datetime.now().isoformat()
+    }, follow_redirects=True)
+
+    assert b'Feature name and timestamp are required for feature event.' in response.data
 
 def test_add_feature_event_success(client):
     # First, create a customer to ensure one exists
@@ -203,12 +198,10 @@ def test_add_feature_event_success(client):
     # Add a feature event with all required fields
     response = client.post(f'/customers/{customer_id}/events', json={
         "event_type": "feature",
-        "data": {
-            "feature_name": "Advanced Analytics",
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
-    })
-    assert response.status_code == 201  # Should return created status
+        "feature_name": "Advanced Analytics",
+        "timestamp": datetime.now().isoformat()
+    }, follow_redirects=True)
+
     assert b'event recorded' in response.data
 
 def test_add_ticket_event_success(client):
@@ -223,13 +216,11 @@ def test_add_ticket_event_success(client):
     # Add a ticket event with all required fields
     response = client.post(f'/customers/{customer_id}/events', json={
         "event_type": "ticket",
-        "data": {
-            "status": "open",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-    })
-    assert response.status_code == 201  # Should return created status
-    assert b'event recorded' in response.data
+        "status": "open",
+        "created_at": datetime.now().isoformat()
+    }, follow_redirects=True)
+
+    assert b'event recorded successfully' in response.data
 
 def test_add_invoice_event_success(client):
     # First, create a customer to ensure one exists
@@ -243,15 +234,13 @@ def test_add_invoice_event_success(client):
     # Add an invoice event with all required fields
     response = client.post(f'/customers/{customer_id}/events', json={
         "event_type": "invoice",
-        "data": {
-            "issued_at": (datetime.now(timezone.utc) - timedelta(days=30)).isoformat(),
-            "due_date": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
-            "amount": 1500.00,
-            "status": "paid",
-            "paid_date": (datetime.now(timezone.utc) - timedelta(days=15)).isoformat()
-        }
-    })
-    assert response.status_code == 201  # Should return created status
+        "issued_at": (datetime.now() - timedelta(days=30)).isoformat(),
+        "due_date": (datetime.now() + timedelta(days=30)).isoformat(),
+        "amount": 1500.00,
+        "status": "paid",
+        "paid_date": (datetime.now() - timedelta(days=15)).isoformat()
+    }, follow_redirects=True)
+
     assert b'event recorded' in response.data
 
 def test_risky_customers_in_dashboard(client):
@@ -282,10 +271,115 @@ def test_risky_customers_in_dashboard(client):
 
     response = client.get('/dashboard')
 
-    print(response.data)  # Debugging line to inspect response content
-
     assert response.status_code == 200
 
     assert b'At-Risk Customers' in response.data  # Check for risky customers section
     assert b'<td>Risky Customer</td>'  in response.data  # Ensure non-risky customers are not listed
     assert b'<td>0.0</td>' in response.data  # Check for health score presence
+
+def test_future_timestamp_event(client):
+    # First, create a customer to ensure one exists
+    with current_app.db_manager.get_write_session() as session:
+        from app.models import Customer
+        new_customer = Customer(name="Future Timestamp Test Customer", segment="SMB")
+        session.add(new_customer)
+        session.commit()
+        customer_id = new_customer.id
+
+    future_time = (datetime.now() + timedelta(days=1)).isoformat()
+
+    # Add a login event with a future timestamp
+    response = client.post(f'/customers/{customer_id}/events', json={
+        "event_type": "login",
+        "timestamp": future_time
+    }, follow_redirects=True)
+
+    assert b"Timestamp cannot be in the future" in response.data
+
+def test_invoice_event_invalid_dates(client):
+    # First, create a customer to ensure one exists
+    with current_app.db_manager.get_write_session() as session:
+        from app.models import Customer
+        new_customer = Customer(name="Invoice Date Test Customer", segment="Enterprise")
+        session.add(new_customer)
+        session.commit()
+        customer_id = new_customer.id
+
+    issued_at = (datetime.now() + timedelta(days=1)).isoformat()  # Future date
+    due_date = (datetime.now() - timedelta(days=10)).isoformat()   # Past date
+
+    # Add an invoice event with issued_at in the future and due_date before issued_at
+    response = client.post(f'/customers/{customer_id}/events', json={
+        "event_type": "invoice",
+        "issued_at": issued_at,
+        "due_date": due_date,
+        "amount": 1000.00
+    }, follow_redirects=True)
+
+    assert b"issued_at cannot be in the future" in response.data
+
+def test_invoice_event_due_date_before_issued_at(client):
+    # First, create a customer to ensure one exists
+    with current_app.db_manager.get_write_session() as session:
+        from app.models import Customer
+        new_customer = Customer(name="Invoice Due Date Test Customer", segment="Enterprise")
+        session.add(new_customer)
+        session.commit()
+        customer_id = new_customer.id
+
+    issued_at = (datetime.now() - timedelta(days=5)).isoformat()  # Past date
+    due_date = (datetime.now() - timedelta(days=10)).isoformat()   # Earlier past date
+
+    # Add an invoice event with due_date before issued_at
+    response = client.post(f'/customers/{customer_id}/events', json={
+        "event_type": "invoice",
+        "issued_at": issued_at,
+        "due_date": due_date,
+        "amount": 1000.00
+    }, follow_redirects=True)
+
+    assert b"due_date cannot be before issued_at" in response.data
+
+def test_invoice_event_negative_amount(client):
+    # First, create a customer to ensure one exists
+    with current_app.db_manager.get_write_session() as session:
+        from app.models import Customer
+        new_customer = Customer(name="Invoice Negative Amount Test Customer", segment="SMB")
+        session.add(new_customer)
+        session.commit()
+        customer_id = new_customer.id
+
+    issued_at = (datetime.now() - timedelta(days=5)).isoformat()  # Past date
+    due_date = (datetime.now() + timedelta(days=5)).isoformat()   # Future date
+
+    # Add an invoice event with negative amount
+    response = client.post(f'/customers/{customer_id}/events', json={
+        "event_type": "invoice",
+        "issued_at": issued_at,
+        "due_date": due_date,
+        "amount": -500.00
+    }, follow_redirects=True)
+
+    assert b"Amount must be positive" in response.data
+
+def test_invoice_event_invalid_amount_format(client):
+    # First, create a customer to ensure one exists
+    with current_app.db_manager.get_write_session() as session:
+        from app.models import Customer
+        new_customer = Customer(name="Invoice Invalid Amount Test Customer", segment="Enterprise")
+        session.add(new_customer)
+        session.commit()
+        customer_id = new_customer.id
+
+    issued_at = (datetime.now() - timedelta(days=5)).isoformat()  # Past date
+    due_date = (datetime.now() + timedelta(days=5)).isoformat()   # Future date
+
+    # Add an invoice event with invalid amount format
+    response = client.post(f'/customers/{customer_id}/events', json={
+        "event_type": "invoice",
+        "issued_at": issued_at,
+        "due_date": due_date,
+        "amount": "invalid_amount"
+    }, follow_redirects=True)
+
+    assert b"Amount must be a valid number" in response.data

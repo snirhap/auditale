@@ -6,6 +6,13 @@
 </head>
 <body class="container mt-5">
     <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
     {% if customer %}
         <h1>{{ customer.name }}</h1>
         <a href="{{ url_for('customers.new_customer_event', customer_id=customer.id) }}" class="btn btn-primary">Record New Event</a>
