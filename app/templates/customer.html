@@ -1,193 +1,227 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>{{ customer.name }} - Customer Details</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #f8f9fa; }
+        .header-bar {
+            background: linear-gradient(90deg, #0d6efd 60%, #6c757d 100%);
+            color: #fff;
+            padding: 2rem 1rem 1rem 1rem;
+            border-radius: 0 0 1rem 1rem;
+            margin-bottom: 2rem;
+        }
+        .card { border-radius: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .table thead th { background: #e9ecef; font-weight: 600; }
+        .table-striped > tbody > tr:nth-of-type(odd) { background-color: #f2f6fc; }
+        .pagination { justify-content: center; }
+        .btn-lg { font-size: 1.1rem; }
+        .customer-link { text-decoration: none; color: #0d6efd; font-weight: 500; }
+        .customer-link:hover { text-decoration: underline; color: #0a58ca; }
+    </style>
 </head>
-<body class="container mt-5">
-    <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ category }}">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
-    {% endwith %}
-    {% if customer %}
-        <h1>{{ customer.name }}</h1>
-        <a href="{{ url_for('customers.new_customer_event', customer_id=customer.id) }}" class="btn btn-primary">Record New Event</a>
-        <a href="{{ url_for('customers.get_customer_health', customer_id=customer.id) }}" class="btn btn-primary">View Health Score History</a>
-        
-        <h3>Details</h3>
-        <ul>
-            <li><strong>Id:</strong> {{ customer.id }}</li>
-            <li><strong>Segment:</strong> {{ customer.segment }}</li>
-            {% if health %}
-                <li><strong>Health Score:</strong> {{ health.health_score }}</li>
-            {% endif %}
-        </ul>
-        <h3>Logins</h3>
-        {% if logins %}
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Timestamp</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for login in logins %}
-                        <tr>
-                            <td>{{ login.timestamp }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p>No logins found for this customer.</p>
-        {% endif %}
+<body>
+    <div class="container">
+        <div class="header-bar mb-4 d-flex flex-column flex-md-row align-items-md-end justify-content-between">
+            <div>
+                <h1 class="mb-2"><i class="fa-solid fa-user"></i> {{ customer.name }}</h1>
+                <p class="mb-0">Customer details and activity overview.</p>
+            </div>
+            <div class="d-flex gap-2 mt-3 mt-md-0">
+                <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-light btn-lg shadow-sm">
+                    <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+                </a>
+                {% if customer %}
+                <a href="{{ url_for('customers.new_customer_event', customer_id=customer.id) }}" class="btn btn-primary btn-lg shadow-sm">
+                    <i class="fa-solid fa-plus"></i> Record New Event
+                </a>
+                <a href="{{ url_for('customers.get_customer_health', customer_id=customer.id) }}" class="btn btn-info btn-lg shadow-sm">
+                    <i class="fa-solid fa-heart-pulse"></i> View Health Score History
+                </a>
+                {% endif %}
+            </div>
+        </div>
 
-        <h3>Invoices</h3>
-        {% if invoices %}
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Invoice ID</th>
-                        <th>Issued At</th>
-                        <th>Due Date</th>
-                        <th>Paid Date</th>
-                        <th>Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for invoice in invoices %}
-                        <tr>
-                            <td>{{ invoice.id }}</td>
-                            <td>{{ invoice.issued_at }}</td>
-                            <td>{{ invoice.due_date }}</td>
-                            <td>{{ invoice.paid_date }}</td>
-                            <td>{{ invoice.amount }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <nav>
-                <ul class="pagination">
-                    {% if invoice_page > 1 %}
-                        <li class="page-item">
-                        <a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page-1, ticket_page=ticket_page, api_page=api_page) }}">Previous</a>
-                        </li>
-                    {% endif %}
-                    {% if invoice_page * per_page < total_invoices %}
-                        <li class="page-item">
-                        <a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page+1, ticket_page=ticket_page, api_page=api_page) }}">Next</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        {% else %}
-            <p>No invoices found for this customer.</p>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
         {% endif %}
+        {% endwith %}
 
-        <h3>Support Tickets</h3>
-        {% if tickets %}
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Ticket ID</th>
-                        <th>Status</th>
-                        <th>Created At</th>
-                        <th>Closed At</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for ticket in tickets %}
-                    <tr>
-                        <td>{{ ticket.id }}</td>
-                        <td>{{ ticket.status }}</td>
-                        <td>{{ ticket.created_at }}</td>
-                        <td>{{ ticket.closed_at }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <nav>
-                <ul class="pagination">
-                    {% if ticket_page > 1 %}
-                        <li class="page-item">
-                        <a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page, ticket_page=ticket_page-1, api_page=api_page) }}">Previous</a>
-                        </li>
+        {% if customer %}
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3 mb-md-0">
+                <div class="card p-3">
+                    <h5 class="text-secondary">Details</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>Id:</strong> {{ customer.id }}</li>
+                        <li class="list-group-item"><strong>Segment:</strong> {{ customer.segment }}</li>
+                        {% if health %}
+                        <li class="list-group-item"><strong>Health Score:</strong> {{ health.health_score }}</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card p-3">
+                    <h5 class="text-secondary">Logins</h5>
+                    {% if logins %}
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead><tr><th>Timestamp</th></tr></thead>
+                            <tbody>
+                                {% for login in logins %}
+                                <tr><td>{{ login.timestamp }}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No logins found for this customer.</p>
                     {% endif %}
-                    {% if ticket_page * per_page < total_tickets %}
-                        <li class="page-item">
-                        <a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page, ticket_page=ticket_page+1, api_page=api_page) }}">Next</a>
-                        </li>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3 mb-md-0">
+                <div class="card p-3">
+                    <h5 class="text-secondary">Invoices</h5>
+                    {% if invoices %}
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead><tr><th>Invoice ID</th><th>Issued At</th><th>Due Date</th><th>Paid Date</th><th>Amount</th></tr></thead>
+                            <tbody>
+                                {% for invoice in invoices %}
+                                <tr>
+                                    <td>{{ invoice.id }}</td>
+                                    <td>{{ invoice.issued_at }}</td>
+                                    <td>{{ invoice.due_date }}</td>
+                                    <td>{{ invoice.paid_date }}</td>
+                                    <td>{{ invoice.amount }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <nav>
+                        <ul class="pagination">
+                            {% if invoice_page > 1 %}
+                            <li class="page-item"><a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page-1, ticket_page=ticket_page, api_page=api_page) }}">Previous</a></li>
+                            {% endif %}
+                            {% if invoice_page * per_page < total_invoices %}
+                            <li class="page-item"><a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page+1, ticket_page=ticket_page, api_page=api_page) }}">Next</a></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% else %}
+                    <p class="text-muted">No invoices found for this customer.</p>
                     {% endif %}
-                </ul>
-            </nav>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card p-3">
+                    <h5 class="text-secondary">Support Tickets</h5>
+                    {% if tickets %}
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead><tr><th>Ticket ID</th><th>Status</th><th>Created At</th><th>Closed At</th></tr></thead>
+                            <tbody>
+                                {% for ticket in tickets %}
+                                <tr>
+                                    <td>{{ ticket.id }}</td>
+                                    <td>{{ ticket.status }}</td>
+                                    <td>{{ ticket.created_at }}</td>
+                                    <td>{{ ticket.closed_at }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <nav>
+                        <ul class="pagination">
+                            {% if ticket_page > 1 %}
+                            <li class="page-item"><a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page, ticket_page=ticket_page-1, api_page=api_page) }}">Previous</a></li>
+                            {% endif %}
+                            {% if ticket_page * per_page < total_tickets %}
+                            <li class="page-item"><a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page, ticket_page=ticket_page+1, api_page=api_page) }}">Next</a></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% else %}
+                    <p class="text-muted">No support tickets found for this customer.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3 mb-md-0">
+                <div class="card p-3">
+                    <h5 class="text-secondary">Feature Usages</h5>
+                    {% if features %}
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead><tr><th>Feature Name</th><th>Timestamp</th></tr></thead>
+                            <tbody>
+                                {% for feature in features %}
+                                <tr>
+                                    <td>{{ feature.feature_name }}</td>
+                                    <td>{{ feature.timestamp }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No feature usages found for this customer.</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card p-3">
+                    <h5 class="text-secondary">API Calls</h5>
+                    {% if apis %}
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead><tr><th>Endpoint</th><th>Timestamp</th></tr></thead>
+                            <tbody>
+                                {% for api in apis %}
+                                <tr>
+                                    <td>{{ api.api_endpoint }}</td>
+                                    <td>{{ api.timestamp }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <nav>
+                        <ul class="pagination">
+                            {% if api_page > 1 %}
+                            <li class="page-item"><a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page, ticket_page=ticket_page, api_page=api_page-1) }}">Previous</a></li>
+                            {% endif %}
+                            {% if api_page * per_page < total_apis %}
+                            <li class="page-item"><a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page, ticket_page=ticket_page, api_page=api_page+1) }}">Next</a></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% else %}
+                    <p class="text-muted">No API calls found for this customer.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
         {% else %}
-            <p>No support tickets found for this customer.</p>
+        <div class="alert alert-danger">Customer not found.</div>
         {% endif %}
-
-        <h3>Feature Usages</h3>
-        {% if features %}
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Feature Name</th>
-                    <th>Timestamp</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for feature in features %}
-                    <tr>
-                        <td>{{ feature.feature_name }}</td>
-                        <td>{{ feature.timestamp }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-            <p>No feature usages found for this customer.</p>
-        {% endif %}
-
-        <h3>API Calls</h3>
-        {% if apis %}
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Endpoint</th>
-                        <th>Timestamp</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for api in apis %}
-                        <tr>
-                            <td>{{ api.api_endpoint }}</td>
-                            <td>{{ api.timestamp }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <nav>
-                <ul class="pagination">
-                    {% if api_page > 1 %}
-                    <li class="page-item">
-                    <a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page, ticket_page=ticket_page, api_page=api_page-1) }}">Previous</a>
-                    </li>
-                    {% endif %}
-                    {% if api_page * per_page < total_apis %}
-                    <li class="page-item">
-                    <a class="page-link" href="{{ url_for('customers.get_customer', customer_id=customer.id, invoice_page=invoice_page, ticket_page=ticket_page, api_page=api_page+1) }}">Next</a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        {% else %}
-            <p>No API calls found for this customer.</p>
-        {% endif %}
-    {% else %}
-        <p>Customer not found.</p>
-    {% endif %}
-
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

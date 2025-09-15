@@ -1,131 +1,186 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #f8f9fa; }
+        .header-bar {
+            background: linear-gradient(90deg, #0d6efd 60%, #6c757d 100%);
+            color: #fff;
+            padding: 2rem 1rem 1rem 1rem;
+            border-radius: 0 0 1rem 1rem;
+            margin-bottom: 2rem;
+        }
+        .card {
+            border-radius: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .table thead th {
+            background: #e9ecef;
+            font-weight: 600;
+        }
+        .table-striped > tbody > tr:nth-of-type(odd) {
+            background-color: #f2f6fc;
+        }
+        .table-success { background-color: #d1e7dd !important; }
+        .table-warning { background-color: #fff3cd !important; }
+        .table-danger { background-color: #f8d7da !important; }
+        .health-cell { font-weight: bold; font-size: 1.1em; text-align: center; }
+        .pagination { justify-content: center; }
+        .btn-lg { font-size: 1.1rem; }
+    </style>
 </head>
-<body class="container mt-5">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ category }}">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
-    {% endwith %}
-    <h1>Dashboard</h1>
+<body>
+    <div class="container">
+        <div class="header-bar mb-4 d-flex flex-column flex-md-row align-items-md-end justify-content-between">
+            <div>
+                <h1 class="mb-2"><i class="fa-solid fa-gauge-high"></i> Dashboard</h1>
+                <p class="mb-0">Overview of customer activity and health.</p>
+            </div>
+            <a href="{{ url_for('customers.list_customers') }}" class="btn btn-light btn-lg shadow-sm mt-3 mt-md-0">
+                <i class="fa-solid fa-users"></i> View All Customers
+            </a>
+        </div>
 
-    <a href="{{ url_for('customers.list_customers') }}" class="btn btn-primary mb-4">View All Customers</a>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
 
-    {% if testing %}
-        <form action="{{ url_for('dashboard.seed_database') }}" method="POST">
-            <button type="submit" class="btn btn-warning">Seed Database</button>
+        {% if testing %}
+        <form action="{{ url_for('dashboard.seed_database') }}" method="POST" class="mb-4">
+            <button type="submit" class="btn btn-warning btn-lg"><i class="fa-solid fa-seedling"></i> Seed Database</button>
         </form>
-    {% endif %}
+        {% endif %}
 
-    <h2>Latest Actions</h2>
-    <p></p>
-    <h3>Latest Logins</h3>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Customer ID</th>
-                <th>Timestamp</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for login in latest_actions.logins %}
-                <tr>
-                    <td>{{ login.customer_id }}</td>
-                    <td>{{ login.timestamp }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3 mb-md-0">
+                <div class="card p-3 text-center">
+                    <h5 class="text-secondary">Latest Logins</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead>
+                                <tr><th>Customer ID</th><th>Timestamp</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for login in latest_actions.logins %}
+                                <tr>
+                                    <td>{{ login.customer_id }}</td>
+                                    <td>{{ login.timestamp }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card p-3 text-center">
+                    <h5 class="text-secondary">Latest Feature Usages</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead>
+                                <tr><th>Customer ID</th><th>Feature Name</th><th>Timestamp</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for feature in latest_actions.feature_usages %}
+                                <tr>
+                                    <td>{{ feature.customer_id }}</td>
+                                    <td>{{ feature.feature_name }}</td>
+                                    <td>{{ feature.timestamp }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <h3>Latest Feature Usages</h3>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Customer ID</th>
-                <th>Feature Name</th>
-                <th>Timestamp</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for feature in latest_actions.feature_usages %}
-                <tr>
-                    <td>{{ feature.customer_id }}</td>
-                    <td>{{ feature.feature_name }}</td>
-                    <td>{{ feature.timestamp }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3 mb-md-0">
+                <div class="card p-3 text-center">
+                    <h5 class="text-secondary">Latest Invoices</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead>
+                                <tr><th>Invoice ID</th><th>Customer ID</th><th>Issued At</th><th>Due Date</th><th>Paid Date</th><th>Amount</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in latest_actions.invoices %}
+                                <tr>
+                                    <td>{{ invoice.id }}</td>
+                                    <td>{{ invoice.customer_id }}</td>
+                                    <td>{{ invoice.issued_at }}</td>
+                                    <td>{{ invoice.due_date }}</td>
+                                    <td>{{ invoice.paid_date }}</td>
+                                    <td>{{ invoice.amount }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card p-3 text-center">
+                    <h5 class="text-secondary">Latest API Calls</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead>
+                                <tr><th>Customer ID</th><th>Endpoint</th><th>Timestamp</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for api in latest_actions.api_calls %}
+                                <tr>
+                                    <td>{{ api.customer_id }}</td>
+                                    <td>{{ api.api_endpoint }}</td>
+                                    <td>{{ api.timestamp }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <h3>Latest Invoices</h3>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Invoice ID</th>
-                <th>Customer ID</th>
-                <th>Issued At</th>
-                <th>Due Date</th>
-                <th>Paid Date</th>
-                <th>Amount</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for invoice in latest_actions.invoices %}
-                <tr>
-                    <td>{{ invoice.id }}</td>
-                    <td>{{ invoice.customer_id }}</td>
-                    <td>{{ invoice.issued_at }}</td>
-                    <td>{{ invoice.due_date }}</td>
-                    <td>{{ invoice.paid_date }}</td>
-                    <td>{{ invoice.amount }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <h3>Latest API Calls</h3>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Customer ID</th>
-                <th>Endpoint</th>
-                <th>Timestamp</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for api in latest_actions.api_calls %}
-                <tr>
-                    <td>{{ api.customer_id }}</td>
-                    <td>{{ api.api_endpoint }}</td>
-                    <td>{{ api.timestamp }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <h2>At-Risk Customers (Health Score &lt; {{ health_score_risk_threshold }})</h2>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Customer ID</th>
-                <th>Name</th>
-                <th>Health Score</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for customer in risky_customers %}
-                <tr class="{{ customer.css_class }}">
-                    <td>{{ customer.id }}</td>
-                    <td>{{ customer.name }}</td>
-                    <td>{{ customer.health_score }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white pb-0">
+                <h2 class="h4 mb-0"><i class="fa-solid fa-triangle-exclamation text-danger"></i> At-Risk Customers (Health Score &lt; {{ health_score_risk_threshold }})</h2>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>Customer ID</th>
+                                <th>Name</th>
+                                <th>Health Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for customer in risky_customers %}
+                            <tr class="{{ customer.css_class }}">
+                                <td>{{ customer.id }}</td>
+                                <td>{{ customer.name }}</td>
+                                <td>{{ customer.health_score }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

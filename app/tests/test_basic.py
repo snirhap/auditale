@@ -138,7 +138,9 @@ def test_customers_page_content(client):
 def test_dashboard_page_content(client):
     response = client.get('/dashboard')
     assert response.status_code == 200
-    assert b'Latest Actions' in response.data  # Check for latest actions section
+    assert b'Latest Logins' in response.data  # Check for latest logins section
+    assert b'Latest Feature Usages' in response.data  # Check for latest features section
+    assert b'Latest Invoices' in response.data  # Check for latest invoices section
     assert b'At-Risk Customers' in response.data  # Check for risky customers section
 
 def test_customer_health_page_content(client):
