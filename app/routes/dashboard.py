@@ -16,7 +16,8 @@ def dashboard():
             "dashboard.html",
             latest_actions=latest,
             risky_customers=risky,
-            health_score_risk_threshold=Constants.AtRiskThreshold
+            health_score_risk_threshold=Constants.AtRiskThreshold,
+            testing=True if current_app.config.get('FLASK_ENV') in ['testing', 'development'] else False,
         )
 
 @dashboard_bp.route("/dashboard/seed", methods=["POST"])
