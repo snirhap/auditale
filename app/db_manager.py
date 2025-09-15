@@ -6,18 +6,16 @@ from random import choice
 
 class DatabaseManager:
     # Context-managed SQLAlchemy sessions:
-    # - get_write_session() for transactional writes with commit/rollback
-    # - get_read_session() for read-only queries from random replicas
+    # get_write_session() for transactional writes with commit/rollback
+    # get_read_session() for read-only queries from random replicas
     def __init__(self, config: Config):
         self.config = config
         if getattr(config, "TESTING", False):
-            # Testing configuration needed
             self.write_engine = create_engine(f'sqlite:///{config.TEST_DB}', pool_pre_ping=True)
             self.write_sessionmaker = sessionmaker(bind=self.write_engine)
             self.read_engines = [self.write_engine]
             self.read_sessionsmakers = [self.write_sessionmaker]
         else:
-            # Read and Write DBs
             self.write_engine = self._create_engine(config.POSTGRES_USER, 
                                                     config.POSTGRES_PASSWORD, 
                                                     config.POSTGRES_PRIMARY_HOST, 

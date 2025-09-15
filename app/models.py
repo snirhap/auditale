@@ -60,7 +60,7 @@ class SupportTicket(db.Model):
     __tablename__ = "support_tickets"
     id = Column(Integer, primary_key=True)
     customer_id = Column(Integer, ForeignKey("customers.id"))
-    status = Column(String, default="open")  # open/closed
+    status = Column(String, default="open")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     closed_at = Column(DateTime, nullable=True)
 
@@ -83,7 +83,7 @@ class Invoice(db.Model):
     due_date = Column(DateTime, nullable=False)
     paid_date = Column(DateTime, nullable=True)
     amount = Column(Float, nullable=False)
-    status = Column(String, default="unpaid")  # unpaid/paid
+    status = Column(String, default="unpaid")
 
     customer = relationship("Customer", back_populates="invoices")
 

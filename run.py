@@ -8,10 +8,8 @@ env = os.getenv("FLASK_ENV", "development")  # "development", "testing", "produc
 if env == "testing":
     app = create_app(TestConfig)
     with app.app_context():
-        # create tables
         from app.models import db
         db.create_all()
-        # seed data
         seed(app)
 else:
     app = create_app(Config)

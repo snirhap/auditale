@@ -12,7 +12,7 @@ def list_customers():
     customers_page = request.args.get('page', 1, type=int)
     per_page = 20  # items per page
 
-    sort_by = request.args.get("sort_by", "name")  # default sort
+    sort_by = request.args.get("sort_by", "name")
     order = request.args.get("order", "asc")
     
     # Prevent SQL injection by allowing only specific columns
@@ -32,13 +32,11 @@ def list_customers():
                 "health_score": score
             })
         
-        # Sort in Python
         if sort_by == "health_score":
             customers_with_health.sort(key=lambda x: x["health_score"], reverse=(order=="desc"))
-        else:  # default sort by name
+        else:
             customers_with_health.sort(key=lambda x: x["name"].lower(), reverse=(order=="desc"))
 
-        # Paginate in Python
         start = (customers_page - 1) * per_page
         end = start + per_page
         paginated_customers_with_health = customers_with_health[start:end]
