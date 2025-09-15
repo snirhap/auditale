@@ -26,6 +26,7 @@ def list_customers():
 
         for c in customers:
             score = calculate_customer_health(session, c.id).get("health_score", 0)
+
             customers_with_health.append({
                 **c.to_dict(),
                 "health_score": score
@@ -51,7 +52,8 @@ def list_customers():
             page=customers_page,
             total_pages=total_pages,
             sort_by=sort_by,
-            order=order
+            order=order,
+            constants=Constants
         )
         
 @customer_bp.route('/customers/<int:customer_id>', methods=['GET'])

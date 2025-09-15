@@ -16,7 +16,7 @@ def dashboard():
             "dashboard.html",
             latest_actions=latest,
             risky_customers=risky,
-            health_score_risk_threshold=Constants.AtRiskThreshold,
+            health_score_risk_threshold=Constants.AT_RISK_THRESHOLD,
             testing=True if current_app.config.get('FLASK_ENV') in ['testing', 'development'] else False,
         )
 
@@ -50,7 +50,7 @@ def risky_customers():
         
         for c in customers:
             health = calculate_customer_health(session, c.id)
-            if health and health.get("health_score") <= Constants.AtRiskThreshold:
+            if health and health.get("health_score") <= Constants.AT_RISK_THRESHOLD:
                 risky_customers_list.append({
                     **c.to_dict(),
                     "health_score": health.get("health_score", 0),

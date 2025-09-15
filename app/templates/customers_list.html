@@ -31,7 +31,13 @@
                             {{ c.name }}
                         </a>
                     </td>
-                    <td>
+                    <td class="{% if c.health_score < constants.AT_RISK_THRESHOLD %}
+                            table-danger
+                        {% elif c.health_score < constants.MODERATE_RISK_THRESHOLD %}
+                            table-warning
+                        {% else %}
+                            table-success
+                        {% endif %}">
                         <a href="{{ url_for('customers.get_customer_health', customer_id=c.id) }}"> 
                             {{ c.health_score }}
                         </a>

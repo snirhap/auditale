@@ -1,7 +1,7 @@
 class Constants:
-    NotAtRiskThreshold = 90
-    ModerateRiskThreshold = 70
-    AtRiskThreshold = 50
+    NOT_AT_RISK_THRESHOLD = 90
+    MODERATE_RISK_THRESHOLD = 70
+    AT_RISK_THRESHOLD = 50
 
     LOGIN_WEIGHT = 0.25
     FEATURE_ADOPTION_WEIGHT = 0.25

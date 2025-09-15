@@ -27,7 +27,7 @@ def seed(app=None):
     with app.app_context():
         with app.db_manager.get_write_session() as session:
 
-            if TRUNCATE_FIRST:
+            if TRUNCATE_FIRST or app.config['TESTING']:
                 inspector = inspect(session.bind)
 
                 for table in [ApiUsage, FeatureUsage, Invoice, LoginEvent, SupportTicket, Customer]:
