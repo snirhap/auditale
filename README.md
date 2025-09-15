@@ -53,7 +53,7 @@ http://127.0.0.1:8000/
 
 This will use SQLite and auto-create the test DB.
 
-### Docker Compose (Postgres with Write+Read DB Engines, nginex as Load balancer)
+### Docker Compose (Postgres with Write+Read DB Engines, nginx as Load balancer)
 ```
 docker-compose up --build --scale web=3
 ```
@@ -61,12 +61,6 @@ docker-compose up --build --scale web=3
 Then access via:
 ```
 http://0.0.0.0:80/dashboard
-```
-
-- Run migrations inside the container to set up schema:
-
-```
-docker-compose exec web flask db upgrade
 ```
 
 ## Configuration
@@ -104,7 +98,7 @@ flask db upgrade
 
 ### Seed test/fake data:
 
-I build a tool to seed "realistic" data into the database (happens automatically in testing env), the tool running in background is:
+A tool to seed "realistic" data into the database (happens automatically in testing env), the tool running in background is:
 
 ```python -m app.utils.seed_db```
 
@@ -121,10 +115,10 @@ I build a tool to seed "realistic" data into the database (happens automatically
 * Forms: validated server-side, with flash() messages for feedback
 * API (JSON): returns validation errors in JSON
 * Handles:
- ** Missing required fields
- ** Invalid datetime formats
- ** Logical errors (e.g. closed_at < created_at)
- ** Numeric checks (invoice amounts must be positive)
+    * Missing required fields
+    * Invalid datetime formats
+    * Logical errors (e.g. closed_at < created_at)
+    * Numeric checks (invoice amounts must be positive)
 
  ## Testing
  Pytest is used for automated tests.

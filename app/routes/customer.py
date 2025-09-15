@@ -90,7 +90,7 @@ def get_customer(customer_id):
             .limit(per_page)
             .all()
         )
-        print(f'Fetched {len(invoices)} invoices for customer {customer_id}')  # Debugging line
+
         total_invoices = session.query(Invoice).filter_by(customer_id=customer_id).count()
         
         # Paginate tickets
@@ -363,7 +363,6 @@ def record_customer_event(customer_id):
             
             # API Usage Event
             elif event_type == "api":
-                print('API Usage Event')
                 endpoint = payload.get("endpoint")
                 ts = payload.get("timestamp")
                 if not endpoint or not ts:
