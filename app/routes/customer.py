@@ -149,6 +149,42 @@ def get_customer(customer_id):
                                total_features=total_features,
                                health=health_details), 200
 
+def calculate_login_score(session, customer_id, last_30d):
+    login_count = session.query(func.count(LoginEvent.id)) \
+                                .filter(LoginEvent.customer_id == customer_id,
+                                        LoginEvent.timestamp >= last_30d).scalar() or 0
+    return min(login_count * 10, 100)  # 10 logins or more == maximum points
+
+def calculate_feature_adoption_score(session, customer_id):
+    total_features = session.query(func.count(func.distinct(FeatureUsage.feature_name))).scalar() or 0
+
+    features_used = session.query(func.count(func.distinct(FeatureUsage.feature_name))) \
+                                 .filter(FeatureUsage.customer_id == customer_id).scalar() or 0
+    adoption_rate = features_used / total_features if total_features > 0 else 0
+    return min(int(adoption_rate * 100), 100)
+
+def calculate_tickets_score(session, customer_id):
+    open_tickets = session.query(func.count(SupportTicket.id)) \
+                                .filter(SupportTicket.customer_id == customer_id,
+                                        SupportTicket.status == "open").scalar() or 0
+    return max(100 - (open_tickets * 10), 0)  # 10 open tickets or more == minimum points
+
+def calculate_invoice_score(session, customer_id):
+    customer_invoices = session.query(Invoice).filter(Invoice.customer_id==customer_id).all()
+    if customer_invoices:
+        unpaid_or_late_invoices = [
+                invoice for invoice in customer_invoices if (invoice.status == 'unpaid' or (invoice.due_date and invoice.due_date > invoice.due_date))
+            ]
+        return int(((len(customer_invoices) - len(unpaid_or_late_invoices)) / len(customer_invoices)) * 100)  # unpaid or late invoices or more reduce points
+    else:
+        return 100
+
+def calculate_api_usage_score(session, customer_id, last_30d):
+    api_calls = session.query(func.count(ApiUsage.api_endpoint)) \
+                                .filter(ApiUsage.customer_id == customer_id,
+                                        ApiUsage.timestamp >= last_30d).scalar() or 0
+    return min(api_calls, 100)  # 100+ calls == maximum points
+
 def calculate_customer_health(session, customer_id):
     customer = session.query(Customer).filter_by(id=customer_id).first()
     if not customer:
@@ -158,40 +194,19 @@ def calculate_customer_health(session, customer_id):
     last_30d = now - timedelta(days=30)
 
     # Login frequency (last 30 days)
-    login_count = session.query(func.count(LoginEvent.id)) \
-                                .filter(LoginEvent.customer_id == customer_id,
-                                        LoginEvent.timestamp >= last_30d).scalar() or 0
-    login_score = min(login_count * 10, 100)  # 10 logins or more == maximum points
+    login_score = calculate_login_score(session, customer_id, last_30d)
 
     # Feature adoption (unique features used / total features)
-    total_features = session.query(func.count(func.distinct(FeatureUsage.feature_name))).scalar() or 0
-
-    features_used = session.query(func.count(func.distinct(FeatureUsage.feature_name))) \
-                                 .filter(FeatureUsage.customer_id == customer_id).scalar() or 0
-    adoption_rate = features_used / total_features if total_features > 0 else 0
-    adoption_score = min(int(adoption_rate * 100), 100)
+    adoption_score = calculate_feature_adoption_score(session, customer_id)
 
     # Support tickets (penalty for open tickets)
-    open_tickets = session.query(func.count(SupportTicket.id)) \
-                                .filter(SupportTicket.customer_id == customer_id,
-                                        SupportTicket.status == "open").scalar() or 0
-    ticket_score = max(100 - (open_tickets * 20), 0)  # 5 open tickets or more == minimum points
+    ticket_score = calculate_tickets_score(session, customer_id)
 
     # Invoice payments (check paid and in time)
-    customer_invoices = session.query(Invoice).filter(Invoice.customer_id==customer_id).all()
-    if customer_invoices:
-        unpaid_or_late_invoices = [
-                invoice for invoice in customer_invoices if (invoice.status == 'unpaid' or (invoice.due_date and invoice.due_date > invoice.due_date))
-            ]
-        invoice_score = int(((len(customer_invoices) - len(unpaid_or_late_invoices)) / len(customer_invoices)) * 100)  # unpaid or late invoices or more reduce points
-    else:
-        invoice_score = 100
+    invoice_score = calculate_invoice_score(session, customer_id)
 
     # API usage trends (last 30 days)
-    api_calls = session.query(func.count(ApiUsage.api_endpoint)) \
-                                .filter(ApiUsage.customer_id == customer_id,
-                                        ApiUsage.timestamp >= last_30d).scalar() or 0
-    api_score = min(api_calls * 10, 100)  # 10+ calls == maximum points
+    api_score = calculate_api_usage_score(session, customer_id, last_30d)
 
     # Final weighted score
     health_score = (

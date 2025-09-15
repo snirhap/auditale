@@ -53,6 +53,8 @@ http://127.0.0.1:8000/
 
 This will use SQLite and auto-create the test DB.
 
+***!!! NOTICE that each "Seed Database" in this environment will truncate the last seed, this is to avoid overload on the simple db file***
+
 ### Docker Compose (Postgres with Write+Read DB Engines, nginx as Load balancer)
 ```
 docker-compose up --build --scale web=3
